@@ -1,0 +1,39 @@
+{
+    "id": "org.kde.budgie",
+    "runtime": "org.kde.Platform",
+    "runtime-version": "6.6",
+    "sdk": "org.kde.Sdk",
+    "base": "com.riverbankcomputing.PyQt.BaseApp",
+    "base-version": "6.7",
+    "command": "budgie",
+    "finish-args": [
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--device=dri",
+    "--socket=pulseaudio"
+    ],
+    "modules": [
+        "python3-markdown.json",
+        {
+            "name": "budgie",
+            "buildsystem" : "simple",
+            "build-commands" : [
+                "python3 setup.py build",
+                "python3 setup.py install --prefix=/app --root=/"
+            ],
+            "sources": [
+                {
+                    "type": "dir",
+                    "path": "build/lib/",
+                    "dest": "./"
+                },
+                {
+                    "type": "file",
+                    "path": "setup.py",
+                    "dest": "./"
+                }
+            ]
+        }
+    ]
+}

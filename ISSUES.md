@@ -1,0 +1,13 @@
+- budget group ID is not saved in budget items, instead it gets the name string
+- extrapolations do not take into account previously paid items yet
+- hiding a column needs storage and functionality
+- adding a one-off isn't supported yet at all
+- adding savings items isn't done yet at all
+- continue improving ods export
+- write ods import for restoring backup
+- color themes?
+
+- write unit tests
+- do integration tests with test sqlite db
+- harden with consts or enums
+- add comments

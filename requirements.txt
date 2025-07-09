@@ -1,0 +1,11 @@
+antiorm==1.2.1
+coverage==7.6.4
+db==0.1.1
+db-sqlite3==0.0.1
+odswriter==0.4.0
+packaging==24.1
+PyQt6==6.7.1
+PyQt6-Qt6==6.7.3
+PyQt6_sip==13.8.0
+requirements-parser==0.11.0
+types-setuptools==75.1.0.20241014
