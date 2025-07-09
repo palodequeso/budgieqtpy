@@ -340,7 +340,11 @@ class Calendar(QWidget):
     def got_paid_save(self, income_date, account_name, accounts, modal):
         schedule_column = self.schedule.columns[income_date]
         income_entry = schedule_column.incomes[0]
-        self.mark_paid_with_ledger(income_entry, account_name, accounts, modal)
+        accounts = self.db.fetch_accounts(self.selected_profile.id)
+        account = next(
+            (x for x in accounts if x.name == account_name), None
+        )
+        self.mark_paid_with_ledger(income_entry, income_entry.items[0], account.id, income_entry.total(), date.today(), modal)
 
     def mark_paid(self, item: ScheduleEntryItem, entry: ScheduleEntry):
         accounts = self.db.fetch_accounts(self.selected_profile.id)

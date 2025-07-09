@@ -1,5 +1,7 @@
 ## An in progress project to create a budgeting app for normies with Qt and Python
 
+### It is still a bit bug riddled, but I intend to fix that over the coming months.
+
 https://develop.kde.org/docs/getting-started/python/python-flatpak/  
 `flatpak-builder --verbose --force-clean flatpak-build-dir org.kde.budgie.json`  
 `flatpak-builder --run flatpak-build-dir org.kde.budgie.json budgie`  
@@ -24,6 +26,6 @@ to run tests
   
 if you pip3 install...  
 `pip3 freeze > requirements.txt`  
-
+  
 ![image](screenshots/budgieqtpy-accounts.png)
 ![image](screenshots/budgieqtpy-extrapolate.png)
