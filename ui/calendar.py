@@ -427,14 +427,23 @@ class Calendar(QWidget):
             paid_amount,
             account_id,
         )
-        self.db.update_extrapolation_item_ledger_id(
-            item.extrapolation_item.id, ledger.id
-        )
-        modal.close()
+        # Check if entry has multiple items, and if other items are not paid, then set the ledger entry for those items
+        if len(entry.items) > 1:
+            for item in entry.items:
+                if item.ledger_entry is None:
+                    self.db.update_extrapolation_item_ledger_id(
+                        item.extrapolation_item.id, ledger.id
+                    )
+        else:
+            self.db.update_extrapolation_item_ledger_id(
+                item.extrapolation_item.id, ledger.id
+            )
 
         self.schedule.fetch_schedule(self.db, self.selected_profile.id)
         self.schedule.build_schedule()
         self.render_schedule(self.schedule_vertical_layout)
+
+        modal.accept()
 
     @Slot(QTableWidgetItem)
     def cell_clicked(self, item):
@@ -566,7 +575,7 @@ class Calendar(QWidget):
         for income_date in self.schedule.sorted_income_dates:
             date_strings.append(income_date.strftime("%Y-%m-%d"))
 
-        if self.schedule.expense_budget_items is not None:
+        if self.schedule.expense_budget_items is not None and self.schedule_widget is not None:
             vertical_layout.removeWidget(self.schedule_widget)
             del self.schedule_widget
 
@@ -678,6 +687,8 @@ class Calendar(QWidget):
                     ),
                     None,
                 )
+                if income_date.strftime("%Y-%m-%d") == '2025-07-01' and budget_item.name == 'Gas' and matching is not None:
+                    print("\tDEBUG: Found Gas entry", matching.all_paid())
                 if matching is not None:
                     self.grid_entries[(idx, cidx)] = matching
                     self.schedule_widget.setItem(

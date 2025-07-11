@@ -2,6 +2,9 @@
 
 ### It is still a bit bug riddled, but I intend to fix that over the coming months.
 
+Currently it uses a rough attempt at a knapsack problem scheduler.
+I'd also like to add an LLM based scheduler.
+
 https://develop.kde.org/docs/getting-started/python/python-flatpak/  
 `flatpak-builder --verbose --force-clean flatpak-build-dir org.kde.budgie.json`  
 `flatpak-builder --run flatpak-build-dir org.kde.budgie.json budgie`  
