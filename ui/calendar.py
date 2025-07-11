@@ -67,6 +67,7 @@ class Calendar(QWidget):
     entry_widget: QWidget = None
     schedule_widget: QWidget = None
     schedule_writer: ScheduleWriter = None
+    schedule_container_layout: QVBoxLayout = None
 
     def __init__(self, db, selected_profile):
         super().__init__()
@@ -137,9 +138,12 @@ class Calendar(QWidget):
 
         self.schedule_vertical_layout.addLayout(toolsRow)
 
+        self.schedule_container_layout = QVBoxLayout()
+        self.schedule_vertical_layout.addLayout(self.schedule_container_layout)
+
         self.setLayout(self.schedule_vertical_layout)
 
-        self.render_schedule(self.schedule_vertical_layout)
+        self.render_schedule(self.schedule_container_layout)
 
     def date_to_color(self, date, dull=False):
         if dull:
@@ -441,7 +445,9 @@ class Calendar(QWidget):
 
         self.schedule.fetch_schedule(self.db, self.selected_profile.id)
         self.schedule.build_schedule()
-        self.render_schedule(self.schedule_vertical_layout)
+        self.entry_widget.setParent(None)
+        self.entry_widget = None
+        self.render_schedule(self.schedule_container_layout)
 
         modal.accept()
 
@@ -566,7 +572,7 @@ class Calendar(QWidget):
         knapsack.save_schedule()
         self.schedule.fetch_schedule(self.db, self.selected_profile.id)
         self.schedule.build_schedule()
-        self.render_schedule(self.schedule_vertical_layout)
+        self.render_schedule(self.schedule_container_layout)
 
     def render_schedule(self, vertical_layout):
         self.grid_entries = {}
