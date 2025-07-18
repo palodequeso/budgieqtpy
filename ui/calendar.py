@@ -21,6 +21,7 @@ from database.database import Database
 from database.extrapolation_item import ExtrapolationItem
 from database.profile import Profile
 from scheduler.default_knapsack import DefaultKnapsack
+from scheduler.default_llm import DefaultLLM
 from shedule.schedule import Schedule
 from shedule.schedule_entry import ScheduleEntry
 from shedule.schedule_entry_item import ScheduleEntryItem
@@ -82,6 +83,9 @@ class Calendar(QWidget):
         self.grid_entries = {}
         self.entry_widget = None
         self.schedule_widget = None
+        
+        # llm test
+        llm_scheduler = DefaultLLM(self.db, self.selected_profile.id)
 
         self.schedule_vertical_layout = QVBoxLayout()
 
@@ -530,6 +534,18 @@ class Calendar(QWidget):
         cancel_button.clicked.connect(lambda: one_off_dialog.close())
         buttons_layout.addWidget(cancel_button)
         ok_button = QPushButton("Save")
+        ok_button.clicked.connect(
+            lambda: self.add_one_off_entry_save(
+                name_widget.text(),
+                float(amount_widget.text()),
+                type_widget.currentText(),
+                date_widget.date().toPyDate(),
+                income_date_widget.currentText(),
+                account_widget.currentText(),
+                paid_widget.isChecked(),
+                one_off_dialog,
+            )
+        )
         buttons_layout.addWidget(ok_button)
         one_off_layout.addLayout(buttons_layout)
 
