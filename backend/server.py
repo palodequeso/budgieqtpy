@@ -19,12 +19,8 @@ class Server:
         allow_headers=["*"],
     )
 
-    @app.get("/")
-    async def root():
-        return {"message": "Budgie API is running. See /docs for API documentation."}
-
-    @app.get("/profile/{profile_id}")
-    async def get_profile(profile_id: Union[int, str]):
+    @app.get("/profiles/{profile_id}")
+    async def get_profile(profile_id):
         db = Database()
         profile_api = ProfileAPI(db)
         profile = profile_api.get_profile_by_id(int(profile_id))

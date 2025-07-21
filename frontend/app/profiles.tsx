@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 
-export default function Profiles() {
+export default function Profiles({ setProfileId }: { setProfileId: any }) {
     const [profiles, setProfiles] = useState([]);
 
     useEffect(() => {
@@ -23,6 +23,7 @@ export default function Profiles() {
                             <button
                                 key={profile.id}
                                 className="ml-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                                onClick={() => setProfileId(profile.id)}
                             >
                                 {profile.name}
                             </button>
