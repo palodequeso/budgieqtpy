@@ -1,7 +1,9 @@
+import os
 from typing import Union
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from api.profile import ProfileAPI
 from api.schedule import ScheduleAPI
@@ -42,3 +44,7 @@ class Server:
         schedule_api = ScheduleAPI(db)
         schedule = schedule_api.get_profile_by_id(int(profile_id))
         return schedule
+
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    FRONTEND_DIR = os.path.join(BASE_DIR, "..", "frontend")
+    app.mount("/", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
