@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.profile import ProfileAPI
+from api.schedule import ScheduleAPI
 from database.database import Database
 
 # from api.routes import router
@@ -34,3 +35,10 @@ class Server:
         profile_api = ProfileAPI(db)
         profiles = profile_api.get_profiles()
         return profiles
+
+    @app.get("/schedule/{profile_id}")
+    async def get_schedule(profile_id):
+        db = Database()
+        schedule_api = ScheduleAPI(db)
+        schedule = schedule_api.get_profile_by_id(int(profile_id))
+        return schedule
