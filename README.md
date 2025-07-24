@@ -1,6 +1,10 @@
 ## An in progress project to create a budgeting app for normies with Qt and Python
 
-### It is still a bit bug riddled, but I intend to fix that over the coming months.
+------------------------------------------------------------------
+
+### QT App
+
+#### It is still a bit bug riddled, but I intend to fix that over the coming months.
 
 Currently it uses a rough attempt at a knapsack problem scheduler.
 I'd also like to add an LLM based scheduler.
@@ -9,11 +13,11 @@ https://develop.kde.org/docs/getting-started/python/python-flatpak/
 `flatpak-builder --verbose --force-clean flatpak-build-dir org.kde.budgie.json`  
 `flatpak-builder --run flatpak-build-dir org.kde.budgie.json budgie`  
   
-# debian  
+##### debian  
 `sudo apt install build-essential`  
 also might need libqt6-dev  
   
-# opensuse  
+##### opensuse  
 `sudo zypper install -t pattern devel_basis`  
 `sudo zypper install libgthread-2_0-0`  
   
@@ -32,3 +36,16 @@ if you pip3 install...
   
 ![image](screenshots/budgieqtpy-accounts.png)
 ![image](screenshots/budgieqtpy-extrapolate.png)
+
+------------------------------------------------------------------
+
+### Server/Client (Home Network Only, NOT SECURE)
+
+#### Build or watch the frontend (React)
+`cd frontend`
+`npm run build` or `npm run watch`
+
+#### Serve the API and compiled frontend
+`python serve.py`
+
+Navigate to http://localhost:8000

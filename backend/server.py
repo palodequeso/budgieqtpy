@@ -42,7 +42,7 @@ class Server:
     async def get_schedule(profile_id):
         db = Database()
         schedule_api = ScheduleAPI(db)
-        schedule = schedule_api.get_profile_by_id(int(profile_id))
+        schedule = schedule_api.get_by_profile_id(int(profile_id))
         return schedule
 
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))

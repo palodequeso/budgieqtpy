@@ -1,0 +1,1 @@
+watchmedo auto-restart -p "*.py" -R python3 -- serve.py

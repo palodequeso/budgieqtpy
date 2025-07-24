@@ -7,24 +7,23 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 from PyQt6.QtCore import pyqtSignal as Signal
-from database.database import Database
+from api.profile import ProfileAPI
 from database.profile import Profile
 
 
 class Profiles(QWidget):
     profile_selected = Signal(Profile)
 
-    db: Database = None
     profiles: list[Profile] = None
 
     def __init__(self, db, profiles):
         super().__init__()
-        self.db = db
+        self.profilesApi = ProfileAPI(db)
         self.profiles = profiles
         self.render_profiles()
 
     def render_profiles(self):
-        self.profiles = self.db.fetch_profiles()
+        self.profiles = self.profilesApi.get_profiles()
         verticalLayout = QVBoxLayout()
 
         for profile in self.profiles:
@@ -56,5 +55,5 @@ class Profiles(QWidget):
         self.show()
 
     def create_profile(self, name):
-        self.db.create_profile(name)
+        self.profilesApi.create_profile(name)
         self.render_profiles()

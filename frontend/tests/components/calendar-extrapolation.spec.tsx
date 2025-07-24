@@ -18,7 +18,7 @@ function setup() {
             miscEntries={[]}
             miscRowCount={0}
             theme={'dark'}
-            extrapolation={{
+            schedule={{
                 '2020-01-01': CalendarIncomeColumn.fromData(
                     '2020-01-01',
                     [{

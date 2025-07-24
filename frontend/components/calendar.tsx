@@ -27,40 +27,41 @@ function formatExtrapolationData(data: any, startingBalance: number): any {
     const out: { [s: string]: CalendarIncomeColumn } = {};
     const unscheduled: any[] = [];
 
-    for (const extrapolationItem of data.extrapolation) {
-        if (!extrapolationItem.incomeDate) {
+    console.log('data', data);
+    for (const extrapolationItem of data.extrapolation_items) {
+        if (!extrapolationItem.income_date) {
             unscheduled.push(extrapolationItem);
             continue;
         }
 
-        const date = sortableDate(extrapolationItem.incomeDate);
+        const date = sortableDate(extrapolationItem.income_date);
         if (!out[date]) {
-            out[date] = new CalendarIncomeColumn(extrapolationItem.incomeDate);
+            out[date] = new CalendarIncomeColumn(extrapolationItem.income_date);
         }
 
-        const previousEntry = out[date].entries.find(e => e.budgetItem.id === extrapolationItem.budgetItem.id);
+        const previousEntry = out[date].entries.find(e => e.budgetItem.id === extrapolationItem.budget_item_id);
         if (previousEntry) {
             previousEntry.items.push(extrapolationItem);
         } else {
             const entry: CalendarEntry = new CalendarEntry();
             entry.items = [extrapolationItem];
-            entry.budgetItem = { ...extrapolationItem.budgetItem };
-            entry.incomeDate = extrapolationItem.incomeDate;
+            // entry.budgetItem = { ...extrapolationItem.budgetItem };
+            entry.incomeDate = extrapolationItem.income_date;
             out[date].entries.push(entry);
         }
     }
 
-    for (const oneOff of data.oneOffExtrapolationItems) {
-        const date = sortableDate(oneOff.incomeDate);
-        if (!out[date]) {
-            out[date] = new CalendarIncomeColumn(oneOff.incomeDate);
-        }
-        const calendarEntry = new CalendarEntry();
-        calendarEntry.items = [oneOff];
-        calendarEntry.budgetItem = null;
-        calendarEntry.incomeDate = oneOff.incomeDate;
-        out[date].entries.push(calendarEntry);
-    }
+    // for (const oneOff of data.oneOffExtrapolationItems) {
+    //     const date = sortableDate(oneOff.incomeDate);
+    //     if (!out[date]) {
+    //         out[date] = new CalendarIncomeColumn(oneOff.incomeDate);
+    //     }
+    //     const calendarEntry = new CalendarEntry();
+    //     calendarEntry.items = [oneOff];
+    //     calendarEntry.budgetItem = null;
+    //     calendarEntry.incomeDate = oneOff.incomeDate;
+    //     out[date].entries.push(calendarEntry);
+    // }
 
     // for (const ledgerEntry of data.ledgerEntries) {
     //     const incomeDate = sortableDate(ledgerEntry.incomeDate);
@@ -145,6 +146,7 @@ function formatExtrapolationData(data: any, startingBalance: number): any {
 }
 
 export default function Calendar() {
+    const [schedule, setSchedule] = React.useState<any>(null);
     const [extrapolation, setExtrapolation] = React.useState<{ [s: string]: CalendarIncomeColumn }>({});
     const [unscheduledItems, setUnscheduledItems] = React.useState([]);
     const [miscEntries, setMiscEntries] = React.useState({});
@@ -179,30 +181,32 @@ export default function Calendar() {
 
         try {
             const json = await api.get(`/schedule/${profile.id}`);
-            const startingBalance = profile.accounts.reduce((carry, account) => {
-                return parseFloat(carry) + parseFloat(account.balance);
-            }, 0);
-            const { sorted, unscheduled } = formatExtrapolationData(json, startingBalance);
-            setExtrapolation(sorted);
-            setUnscheduledItems(unscheduled);
+            // const startingBalance = profile.accounts.reduce((carry, account) => {
+            //     return parseFloat(carry) + parseFloat(account.balance);
+            // }, 0);
 
-            const miscEntries = {};
-            let maxRows = 0;
-            for (const date of Object.keys(sorted)) {
-                for (const entry of sorted[date].entries) {
-                    if (!entry.budgetItem || entry.budgetItem.id === null) {
-                        if (!miscEntries[date]) {
-                            miscEntries[date] = [];
-                        }
-                        miscEntries[date].push(entry);
-                        if (miscEntries[date].length > maxRows) {
-                            maxRows = miscEntries[date].length;
-                        }
-                    }
-                }
-            }
-            setMiscRowCount(maxRows);
-            setMiscEntries(miscEntries);
+            setSchedule(json);
+            // const { sorted, unscheduled } = formatExtrapolationData(json, startingBalance);
+            // setExtrapolation(sorted);
+            // setUnscheduledItems(unscheduled);
+
+            // const miscEntries = {};
+            // let maxRows = 0;
+            // for (const date of Object.keys(sorted)) {
+            //     for (const entry of sorted[date].entries) {
+            //         if (!entry.budgetItem || entry.budgetItem.id === null) {
+            //             if (!miscEntries[date]) {
+            //                 miscEntries[date] = [];
+            //             }
+            //             miscEntries[date].push(entry);
+            //             if (miscEntries[date].length > maxRows) {
+            //                 maxRows = miscEntries[date].length;
+            //             }
+            //         }
+            //     }
+            // }
+            // setMiscRowCount(maxRows);
+            // setMiscEntries(miscEntries);
 
             const elements: HTMLDivElement[] = [];
             let maxHeight = 0;
@@ -252,10 +256,7 @@ export default function Calendar() {
                                         <TableHead>
                                             <TableRow hover>
                                                 <TableCell></TableCell>
-                                                {extrapolation
-                                                    ? Object.keys(
-                                                        extrapolation,
-                                                    ).map((date) => {
+                                                {schedule.sorted_income_dates.map((date) => {
                                                         return (
                                                             <TableCell
                                                                 style={{
@@ -267,13 +268,12 @@ export default function Calendar() {
                                                                 {<DateLabel date={date} />}
                                                             </TableCell>
                                                         );
-                                                    })
-                                                    : null}
+                                                    })}
                                             </TableRow>
                                         </TableHead>
-                                        {extrapolation ? (
+                                        {schedule ? (
                                             <CalendarExtrapolation
-                                                extrapolation={extrapolation}
+                                                schedule={schedule}
                                                 setEditingCell={setEditingCell}
                                                 theme={theme}
                                                 miscEntries={miscEntries}
@@ -288,7 +288,7 @@ export default function Calendar() {
                             </TableContainer>
                         )}
                         <CalendarSummary
-                            sortedIncomeDates={Object.keys(extrapolation).sort()}
+                            sortedIncomeDates={schedule?.sorted_income_dates ?? []}
                             profile={profile}
                         />
                         {/* <SnackbarUnstyled */}

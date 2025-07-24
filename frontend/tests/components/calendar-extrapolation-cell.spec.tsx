@@ -35,7 +35,7 @@ function setup() {
             } as CalendarEntry}
             date={'2020-01-01'}
             theme={'dark'}
-            extrapolation={{}}
+            schedule={{}}
             setEditingCell={(entry) => {
                 callEntry = entry;
             }}

@@ -14,3 +14,6 @@ class ProfileAPI:
         profile.budget_groups = self.db.fetch_budget_groups(profile_id)
         profile.budget_items = self.db.fetch_budget_items(profile_id)
         return profile
+
+    def create_profile(self, name):
+        return self.db.create_profile(name)

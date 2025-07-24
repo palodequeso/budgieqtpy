@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTabWidget
 
-from database import Database
+from api.profile import ProfileAPI
+from database.database import Database
 from database.profile import Profile
 from ui.accounts import Accounts
 from ui.budget import Budget
@@ -10,9 +11,10 @@ from ui.settings import Settings
 
 
 class MainWindow(QMainWindow):
+    db = Database() # Factor this connection into a singleton that the apis can reference directly?
+    profileApi = ProfileAPI(db)
     selected_profile: Profile = None
     profiles: list[Profile] = []
-    db = Database()
 
     def __init__(self):
         super().__init__()
@@ -21,7 +23,7 @@ class MainWindow(QMainWindow):
         widget = QWidget()
         widget.setLayout(layout)
         self.setCentralWidget(widget)
-        self.profiles = self.db.fetch_profiles()
+        self.profiles = self.profileApi.get_profiles()
         self.render_menu()
         self.render_profiles()
 

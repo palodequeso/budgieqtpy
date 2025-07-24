@@ -76,7 +76,7 @@ export default function CalendarControls({
         </LocalizationProvider>
         <div>
             <Button 
-                style={{ marginRight: '820px' }}
+                style={{ marginRight: '960px' }}
                 className="calendar-header-button"
                 onClick={() => download()}
                 variant="outlined"
@@ -92,7 +92,7 @@ export default function CalendarControls({
                 disabled={unscheduledItems.length === 0}
                 onClick={() => setUnscheduledOpen(true)}
                 className="calendar-header-button"
-                style={{ marginRight: '604px' }}
+                style={{ marginRight: '744px' }}
             >
                 {unscheduledItems.length} unscheduled $
                 {unscheduledItems
@@ -104,6 +104,18 @@ export default function CalendarControls({
                     )
                     .toFixed(2)}
                 <i className="material-icons">warning</i>
+            </Button>
+            <Button
+                id="i-got-paid-button"
+                variant="outlined"
+                color="secondary"
+                // onClick={() => setAddingSavingsItems(true)}
+                className="calendar-header-button"
+                style={{ marginRight: '604px' }}
+                disabled={profile.accounts.find((account) => account.type === 'savings') === undefined}
+            >
+                I Got Paid
+                <i className="material-icons">add</i>
             </Button>
             <Button
                 id="add-savings-items"

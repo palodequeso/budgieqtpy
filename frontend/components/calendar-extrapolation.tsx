@@ -74,59 +74,59 @@ export class CalendarExtrapolationGrid {
     }
 
     public buildBudgetItems() {
-        const uniqueBudgetItems = {};
-        for (const column of this.columns) {
-            for (const entry of column.entries) {
-                if (!entry.budgetItem) {
-                    continue;
-                }
+        // const uniqueBudgetItems = {};
+        // for (const column of this.columns) {
+        //     for (const entry of column.entries) {
+        //         if (!entry.budgetItem) {
+        //             continue;
+        //         }
 
-                if (!uniqueBudgetItems[entry.budgetItem.id]) {
-                    uniqueBudgetItems[entry.budgetItem.id] = entry.budgetItem;
-                }
-            }
-        }
-        this.sortedBudgetItems = Object.keys(uniqueBudgetItems).map((id) => uniqueBudgetItems[id]).sort((a, b) => b.amount - a.amount);
+        //         if (!uniqueBudgetItems[entry.budgetItem.id]) {
+        //             uniqueBudgetItems[entry.budgetItem.id] = entry.budgetItem;
+        //         }
+        //     }
+        // }
+        // this.sortedBudgetItems = Object.keys(uniqueBudgetItems).map((id) => uniqueBudgetItems[id]).sort((a, b) => b.amount - a.amount);
     }
 
     public initializeGrid() {
         this.grid = [];
-        for (const budgetItem of this.sortedBudgetItems) {
-            const row: Array<CalendarEntry | null> = [];
-            for (const incomeDate of this.sortedIncomeDates) {
-                const column = this.columns.find((c) => c.incomeDate.startsWith(incomeDate));
-                if (!column) {
-                    continue;
-                }
+        // for (const budgetItem of this.sortedBudgetItems) {
+        //     const row: Array<CalendarEntry | null> = [];
+        //     for (const incomeDate of this.sortedIncomeDates) {
+        //         const column = this.columns.find((c) => c.incomeDate.startsWith(incomeDate));
+        //         if (!column) {
+        //             continue;
+        //         }
 
-                const foundColumnEntry = column.entries.find((e) => e.budgetItem && e.budgetItem.id === budgetItem.id);
-                if (foundColumnEntry) {
-                    // row.push(foundColumnEntry.entries.find((e) => e.budgetItem.id === budgetItem.id));
-                    row.push(foundColumnEntry);
-                } else {
-                    row.push(null);
-                }
-            }
-            this.grid.push(row);
-        }
+        //         const foundColumnEntry = column.entries.find((e) => e.budgetItem && e.budgetItem.id === budgetItem.id);
+        //         if (foundColumnEntry) {
+        //             // row.push(foundColumnEntry.entries.find((e) => e.budgetItem.id === budgetItem.id));
+        //             row.push(foundColumnEntry);
+        //         } else {
+        //             row.push(null);
+        //         }
+        //     }
+        //     this.grid.push(row);
+        // }
 
-        for (const incomeDate of this.sortedIncomeDates) {
-            const row: Array<CalendarEntry | null> = [];
-            const column = this.columns.find((c) => c.incomeDate.startsWith(incomeDate));
-            if (!column) {
-                continue;
-            }
+        // for (const incomeDate of this.sortedIncomeDates) {
+        //     const row: Array<CalendarEntry | null> = [];
+            // const column = this.columns.find((c) => c.incomeDate.startsWith(incomeDate));
+            // if (!column) {
+            //     continue;
+            // }
 
-            for (const entry of column.entries) {
-                if (entry.budgetItem) {
-                    continue;
-                }
+            // for (const entry of column.entries) {
+            //     if (entry.budgetItem) {
+            //         continue;
+            //     }
 
-                // handle one off expense that is planned
-                row.push(entry);
-            }
-            this.grid.push(row);
-        }
+            //     // handle one off expense that is planned
+            //     row.push(entry);
+            // }
+            // this.grid.push(row);
+        // }
     }
 }
 
@@ -135,19 +135,21 @@ function getMonthByColumnIndex(index: number, sortedIncomeDates: string[]) {
 }
 
 export default function CalendarExtrapolation({
-    extrapolation,
+    // extrapolation,
+    schedule,
     setEditingCell,
     theme,
     miscRowCount,
     miscEntries,
 }: {
-    extrapolation: { [s: string]: CalendarIncomeColumn },
+    // extrapolation: { [s: string]: CalendarIncomeColumn },
+    schedule: any,
     setEditingCell: (cell: any) => void,
     theme: string,
     miscRowCount: number,
     miscEntries: any,
 }) {
-    const exGrid = new CalendarExtrapolationGrid(Object.keys(extrapolation), Object.values(extrapolation));
+    const exGrid = new CalendarExtrapolationGrid(schedule.sorted_income_dates, schedule);
 
     return (
         <TableBody>
@@ -155,35 +157,51 @@ export default function CalendarExtrapolation({
                 backgroundColor: monthColors[theme][12],
             }}>
                 <TableCell style={{ fontWeight: 'bold' }}>Carry</TableCell>
-                {extrapolation ? Object.keys(extrapolation).map((date) => (
+                {(schedule?.sorted_income_dates ?? []).map((date) => (
                     <TableCell key={date + '-carry'} className="currency" style={{fontWeight: 'bold'}}>
-                        <CurrencyLabel amount={extrapolation[date].carry} />
+                        <CurrencyLabel amount={schedule.columns[date]?.starting_balance ?? 0} />
                     </TableCell>
-                )) : null}
+                ))}
             </TableRow>
             <TableRow hover className="calendar-income-row" style={{
                 backgroundColor: monthColors[theme][12],
             }}>
                 <TableCell style={{ fontWeight: 'bold' }}>Income</TableCell>
-                {extrapolation ? Object.keys(extrapolation).map((date) => (
+                {(schedule?.sorted_income_dates ?? []).map((date) => (
                     <TableCell key={date + '-income'} className="currency" style={{
                         fontWeight: 'bold',
                     }}>
-                        <CurrencyLabel amount={extrapolation[date].income.amount} />
+                        <CurrencyLabel amount={schedule.columns[date].incomes[0].items[0].extrapolation_item.amount} />
                     </TableCell>
-                )) : null}
+                ))}
+                    {/* }}
+                    {(schedule?.schedule.income_budget_items ?? []).map((date) => (
+                        <TableCell key={date + '-income'} className="currency" style={{
+                            fontWeight: 'bold',
+                        }}>
+                            <CurrencyLabel amount={schedule.columns[date].incomes[0].items[0].extrapolation_item.amount} />
+                        </TableCell>
+                    ))} */}
             </TableRow>
-            {exGrid.sortedBudgetItems.map((budgetItem, rowIndex) => <TableRow hover key={budgetItem.id}>
+            {schedule?.expense_budget_items.map((budgetItem, rowIndex) => <TableRow hover key={budgetItem.id}>
                 <TableCell style={{ backgroundColor: monthColors[theme][12], fontWeight: 'bold' }}>{budgetItem.name}</TableCell>
-                {exGrid.grid[rowIndex].map((entry: CalendarEntry | null, colIndex) => entry ? <CalendarExtrapolationCell
+                {/*<CalendarExtrapolationCell */}
+                {schedule?.sorted_income_dates.map((date) => (
+                    <TableCell key={date + '-expense'} className="currency" style={{
+                        fontWeight: 'bold',
+                    }}>
+                        <CurrencyLabel amount={schedule.columns[date].expenses.find((e: any) => e.budget_item.id === budgetItem.id)?.items.reduce((acc: any, item: any) => acc + item.extrapolation_item.amount, 0) ?? 0} />
+                    </TableCell>
+                ))}
+                {/* {exGrid.grid[rowIndex].map((entry: CalendarEntry | null, colIndex) => entry ? <CalendarExtrapolationCell
                     key={`empty-${rowIndex}-${colIndex}`}
                     entry={entry}
                     date={entry.incomeDate}
-                    extrapolation={extrapolation}
+                    schedule={schedule}
                     setEditingCell={setEditingCell}
                     theme={theme}
                 /> :
-                    <TableCell key={`empty-${rowIndex}-${colIndex}`} style={{ backgroundColor: monthColors[theme][getMonthByColumnIndex(colIndex, exGrid.sortedIncomeDates) + 12] }}></TableCell>)}
+                    <TableCell key={`empty-${rowIndex}-${colIndex}`} style={{ backgroundColor: monthColors[theme][getMonthByColumnIndex(colIndex, exGrid.sortedIncomeDates) + 12] }}></TableCell>)} */}
             </TableRow>)}
             {miscRowCount > 0 && Array(miscRowCount).fill(0).map((_, i) => (
                 <TableRow hover key={i}>
@@ -195,7 +213,7 @@ export default function CalendarExtrapolation({
                         }}>
                         misc
                     </TableCell>
-                    {extrapolation ? Object.keys(extrapolation).map((date, colIndex) => (
+                    {(schedule?.sorted_income_dates ?? []).map((date, colIndex) => (
                         <TableCell
                             key={date + '-misc' + i}
                             className={`currency calendar-entry-month-${date.substring(5, 7)}`}
@@ -211,7 +229,7 @@ export default function CalendarExtrapolation({
                         >
                             {miscEntries[date] && miscEntries[date][i] ? miscEntries[date][i].amount : ''}
                         </TableCell>
-                    )) : null}
+                    ))}
                 </TableRow>
             ))}
             <TableRow hover className="calendar-total-row" style={{
@@ -219,13 +237,13 @@ export default function CalendarExtrapolation({
                 fontWeight: 'bold',
             }}>
                 <TableCell style={{ fontWeight: 'bold' }}>Total</TableCell>
-                {extrapolation ? Object.keys(extrapolation).map((date) => (
+                {(schedule?.sorted_income_dates ?? []).map((date) => (
                     <TableCell key={date + '-total'} className="currency" style={{
                         fontWeight: 'bold',
                     }}>
-                        <CurrencyLabel amount={extrapolation[date].total} />
+                        {/* <CurrencyLabel amount={extrapolation[date].total} /> */}
                     </TableCell>
-                )) : null}
+                ))}
             </TableRow>
         </TableBody>
     );
