@@ -275,7 +275,7 @@ export default function Calendar() {
                                             <CalendarExtrapolation
                                                 schedule={schedule}
                                                 setEditingCell={setEditingCell}
-                                                theme={theme}
+                                                theme={'dark' /* terrible hack for now, still fixiung settings page */}
                                                 miscEntries={miscEntries}
                                                 miscRowCount={miscRowCount}
                                             />
@@ -287,10 +287,10 @@ export default function Calendar() {
                                 </ScrollContainer>
                             </TableContainer>
                         )}
-                        <CalendarSummary
+                        {/* <CalendarSummary
                             sortedIncomeDates={schedule?.sorted_income_dates ?? []}
                             profile={profile}
-                        />
+                        /> */}
                         {/* <SnackbarUnstyled */}
                         <div
                             // open={fetchError !== null}
@@ -304,8 +304,8 @@ export default function Calendar() {
                 </div>
             )}
             {/* <a href={`/api/calendar/${profile.id}/downloadspreadsheet`}>Download</a> */}
-            <div>Ledger Recent</div>
-            <div>Upcoming Entries</div>
+            {/* <div>Ledger Recent</div> */}
+            {/* <div>Upcoming Entries</div> */}
         </Paper>
     );
 }

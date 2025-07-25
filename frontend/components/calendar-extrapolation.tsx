@@ -134,6 +134,16 @@ function getMonthByColumnIndex(index: number, sortedIncomeDates: string[]) {
     return parseInt(sortedIncomeDates[index].substring(5, 7), 10);
 }
 
+function columnTotal(column) {
+    if (!column) {
+        return 0;
+    }
+    let total = column.starting_balance;
+    total += column.incomes.reduce((acc0: any, income: any) => acc0 + income.items.reduce((acc1: any, item: any) => acc1 + item.extrapolation_item.amount, 0), 0);
+    total += column.expenses.reduce((acc0: any, expense: any) => acc0 + expense.items.reduce((acc1: any, item: any) => acc1 + item.extrapolation_item.amount, 0), 0);
+    return total;
+}
+
 export default function CalendarExtrapolation({
     // extrapolation,
     schedule,
@@ -149,8 +159,7 @@ export default function CalendarExtrapolation({
     miscRowCount: number,
     miscEntries: any,
 }) {
-    const exGrid = new CalendarExtrapolationGrid(schedule.sorted_income_dates, schedule);
-
+    console.log('schedule', schedule);
     return (
         <TableBody>
             <TableRow hover className="calendar-carry-row" style={{
@@ -174,34 +183,20 @@ export default function CalendarExtrapolation({
                         <CurrencyLabel amount={schedule.columns[date].incomes[0].items[0].extrapolation_item.amount} />
                     </TableCell>
                 ))}
-                    {/* }}
-                    {(schedule?.schedule.income_budget_items ?? []).map((date) => (
-                        <TableCell key={date + '-income'} className="currency" style={{
-                            fontWeight: 'bold',
-                        }}>
-                            <CurrencyLabel amount={schedule.columns[date].incomes[0].items[0].extrapolation_item.amount} />
-                        </TableCell>
-                    ))} */}
             </TableRow>
-            {schedule?.expense_budget_items.map((budgetItem, rowIndex) => <TableRow hover key={budgetItem.id}>
+            {schedule?.expense_budget_items.map((budgetItem) => <TableRow hover key={budgetItem.id}>
                 <TableCell style={{ backgroundColor: monthColors[theme][12], fontWeight: 'bold' }}>{budgetItem.name}</TableCell>
-                {/*<CalendarExtrapolationCell */}
-                {schedule?.sorted_income_dates.map((date) => (
-                    <TableCell key={date + '-expense'} className="currency" style={{
-                        fontWeight: 'bold',
-                    }}>
-                        <CurrencyLabel amount={schedule.columns[date].expenses.find((e: any) => e.budget_item.id === budgetItem.id)?.items.reduce((acc: any, item: any) => acc + item.extrapolation_item.amount, 0) ?? 0} />
-                    </TableCell>
+                {schedule?.sorted_income_dates.map((date, dateIndex) => (
+                    schedule.columns[date].expenses.find((e: any) => e.budget_item.id === budgetItem.id) ?
+                    <CalendarExtrapolationCell
+                        key={date + '-expense'}
+                        entry={schedule.columns[date].expenses.find((e: any) => e.budget_item.id === budgetItem.id)}
+                        date={date.substring(0, 7)}
+                        schedule={schedule}
+                        setEditingCell={setEditingCell}
+                        theme={theme}
+                    /> : <TableCell key={date + '-expense'} style={{ backgroundColor: monthColors[theme][getMonthByColumnIndex(dateIndex, schedule?.sorted_income_dates) + 12] }}></TableCell>
                 ))}
-                {/* {exGrid.grid[rowIndex].map((entry: CalendarEntry | null, colIndex) => entry ? <CalendarExtrapolationCell
-                    key={`empty-${rowIndex}-${colIndex}`}
-                    entry={entry}
-                    date={entry.incomeDate}
-                    schedule={schedule}
-                    setEditingCell={setEditingCell}
-                    theme={theme}
-                /> :
-                    <TableCell key={`empty-${rowIndex}-${colIndex}`} style={{ backgroundColor: monthColors[theme][getMonthByColumnIndex(colIndex, exGrid.sortedIncomeDates) + 12] }}></TableCell>)} */}
             </TableRow>)}
             {miscRowCount > 0 && Array(miscRowCount).fill(0).map((_, i) => (
                 <TableRow hover key={i}>
@@ -220,7 +215,7 @@ export default function CalendarExtrapolation({
                             style={{
                                 backgroundColor: miscEntries[date] && miscEntries[date][i] ?
                                     monthColors[theme][parseInt(date.substring(5, 7), 10) - 1] :
-                                    monthColors[theme][getMonthByColumnIndex(colIndex, exGrid.sortedIncomeDates) + 12],
+                                    monthColors[theme][getMonthByColumnIndex(colIndex, schedule?.sorted_income_dates) + 12],
                                 fontWeight: 'bold',
                             }}
                             onClick={() => {
@@ -241,7 +236,7 @@ export default function CalendarExtrapolation({
                     <TableCell key={date + '-total'} className="currency" style={{
                         fontWeight: 'bold',
                     }}>
-                        {/* <CurrencyLabel amount={extrapolation[date].total} /> */}
+                        <CurrencyLabel amount={columnTotal(schedule.columns[date])} />
                     </TableCell>
                 ))}
             </TableRow>

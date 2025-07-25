@@ -49,3 +49,5 @@ if you pip3 install...
 `python serve.py`
 
 Navigate to http://localhost:8000
+
+![image](screenshots/react-frontend-so-far.png)

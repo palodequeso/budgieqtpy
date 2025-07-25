@@ -6,10 +6,10 @@ export default function CurrencyLabel({ amount }) {
 
     return (
         <span>
-            {amount.toLocaleString(currency, {
+            {amount ? amount.toLocaleString(currency, {
                 style: 'currency',
                 currency,
-            })}
+            }) : ''}
         </span>
     );
 }

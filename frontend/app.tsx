@@ -31,8 +31,9 @@ export default function App(props) {
     }, [ profileId ]);
 
     const logout = () => {
-        localStorage.removeItem('budgie:sessionId');
+        localStorage.removeItem('budgie:profileId');
         setProfileId(0);
+        window.location.reload(); // TODO
     }
 
     return (<div id="app">

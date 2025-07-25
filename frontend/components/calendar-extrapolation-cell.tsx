@@ -4,7 +4,7 @@ import { CalendarEntry } from './calendar-extrapolation';
 import { TableCell } from '@mui/material';
 import { monthColors } from './utils';
 
-export default function CalendarExtrapolationCell({ entry, date, theme, schedule, setEditingCell }: { entry: CalendarEntry, date: string, theme: any, schedule: any, setEditingCell: any }) {
+export default function CalendarExtrapolationCell({ entry, date, theme, schedule, setEditingCell }: { entry: /* CalendarEntry*/ any, date: string, theme: any, schedule: any, setEditingCell: any }) {
     const paid = entry.items && entry.items.length > 0 ? entry.items.reduce((acc, item) => {
         return acc && item.ledgerEntry && item.ledgerEntry.id !== null;
     }, true) : false;
@@ -16,7 +16,7 @@ export default function CalendarExtrapolationCell({ entry, date, theme, schedule
             onClick={() => setEditingCell(entry)}
         >
             <span className={['currency-amount', paid ? 'currency-paid' : ''].join( ' ')} >
-                {entry.amount !== 0 ? <CurrencyLabel amount={entry.amount} /> : ''}
+                {entry.amount !== 0 ? <CurrencyLabel amount={entry.items.reduce((acc0, item) => acc0 + item.extrapolation_item.amount, 0)} /> : ''}
             </span>
         </TableCell>
     );
