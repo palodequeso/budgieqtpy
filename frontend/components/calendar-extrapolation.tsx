@@ -11,11 +11,14 @@ import * as moment from 'moment';
 
 export class CalendarEntry {
     public incomeDate: string;
+    public income_date: string; // API uses snake_case
     public budgetItem: any;
+    public budget_item: any; // API uses snake_case
     public items: any[]; // extrapolation items, ledger entries, etc?
     public get amount(): number {
         return this.items.reduce((acc, item) => {
-            return parseFloat(acc.toString()) + parseFloat(item.amount.toString());
+            const itemAmount = item.extrapolation_item?.amount ?? item.amount ?? 0;
+            return parseFloat(acc.toString()) + parseFloat(itemAmount.toString());
         }, 0.0);
     }
 };

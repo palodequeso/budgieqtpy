@@ -168,3 +168,7 @@ budgie.db
 flatpak-build-dir
 
 schedule-spreadsheets
+
+repo
+
+budgie-app.tar*

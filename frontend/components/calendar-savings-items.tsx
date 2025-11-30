@@ -37,7 +37,7 @@ export default function CalendarSavingsItems({ open, profile, close }) {
             addedEntries: computedSavingsItems,
             savingsAccount,
         });
-        close();
+        close(true); // Pass true to indicate successful save
         fetchProfile(profile.id);
     }
 
@@ -52,7 +52,7 @@ export default function CalendarSavingsItems({ open, profile, close }) {
     }
 
     return (
-        <Dialog open={open} onClose={close} maxWidth="md" fullWidth>
+        <Dialog open={open} onClose={() => close(false)} maxWidth="md" fullWidth>
             <DialogTitle>Add Savings Items</DialogTitle>
             <DialogContent>
                 <Paper>
@@ -137,7 +137,7 @@ export default function CalendarSavingsItems({ open, profile, close }) {
                     Compute Savings Items
                 </Button>
                 <Button
-                    onClick={close}
+                    onClick={() => close(false)}
                     color="secondary"
                     variant="outlined"
                 >

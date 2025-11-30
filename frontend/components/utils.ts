@@ -42,33 +42,33 @@ export const monthColors = {
         muiColors.blueGrey[300],
     ],
     dark: [
-        muiColors.red[900],
-        muiColors.pink[900],
-        muiColors.purple[900],
-        muiColors.yellow[900],
-        muiColors.orange[900],
-        muiColors.blue[900],
-        muiColors.lightBlue[900],
-        muiColors.cyan[900],
-        muiColors.teal[900],
-        muiColors.green[900],
-        muiColors.lightGreen[900],
-        muiColors.lime[900],
-        muiColors.blueGrey[900],
-        // second shade
-        muiColors.red[700],
-        muiColors.pink[700],
-        muiColors.purple[700],
-        muiColors.yellow[700],
-        muiColors.orange[700],
-        muiColors.blue[700],
-        muiColors.lightBlue[700],
-        muiColors.cyan[700],
-        muiColors.teal[700],
-        muiColors.green[700],
-        muiColors.lightGreen[700],
-        muiColors.lime[700],
-        muiColors.blueGrey[700],
+        '#8B1515',  // Red - darker than 900
+        '#6B0A3C',  // Pink - darker than 900
+        '#380F6B',  // Purple - darker than 900
+        '#9D6A0A',  // Yellow/Gold - much darker for contrast
+        '#B84000',  // Orange - darker than 900
+        '#0A3677',  // Blue - darker than 900
+        '#014477',  // Light Blue - darker than 900
+        '#004D50',  // Cyan - darker than 900
+        '#003D32',  // Teal - darker than 900
+        '#154718',  // Green - darker than 900
+        '#285216',  // Light Green - darker than 900
+        '#665E12',  // Lime/Olive - darker than 900
+        '#1C262B',  // Blue Grey - darker than 900
+        // second shade (900 shades for variety)
+        '#B71C1C',  // Red 900
+        '#880E4F',  // Pink 900
+        '#4A148C',  // Purple 900
+        '#C67D0D',  // Yellow/Gold - darker custom shade
+        '#E65100',  // Orange 900
+        '#0D47A1',  // Blue 900
+        '#01579B',  // Light Blue 900
+        '#006064',  // Cyan 900
+        '#004D40',  // Teal 900
+        '#1B5E20',  // Green 900
+        '#33691E',  // Light Green 900
+        '#827717',  // Lime 900
+        '#263238',  // Blue Grey 900
     ],
 };
 

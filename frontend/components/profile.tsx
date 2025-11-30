@@ -16,6 +16,7 @@ import { api } from './renderUtils';
 export default function Profile({ theme, swapTheme }) {
     const [newBudgetItemGroupName, setNewBudgetItemGroupName] = React.useState<string>('');
     const profile = useStore((state) => (state as any).profile);
+    const budgetGroups = useStore((state) => (state as any).budgetGroups || []);
 
     const removeBudgetGroup = async (budgetGroup) => {
         const confirm = window.confirm(`Are you sure you want to delete ${budgetGroup.name}?`);
@@ -65,7 +66,7 @@ export default function Profile({ theme, swapTheme }) {
         <Paper className="section" id="profile" elevation={2}>
             <h2>Budget Groups</h2>
             <div>
-                {profile.budgetGroups.map((budgetGroup) => (
+                {budgetGroups.map((budgetGroup) => (
                     <Chip key={budgetGroup.id} label={budgetGroup.name} onDelete={() => removeBudgetGroup(budgetGroup)} />
                 ))}
             </div>

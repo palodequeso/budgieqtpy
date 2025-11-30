@@ -11,6 +11,9 @@ class ProfileAPI:
         if profile is None:
             raise ValueError(f"Profile with id {profile_id} not found")
         profile.accounts = self.db.fetch_accounts(profile_id)
+        # Fetch ledger entries for each account
+        for account in profile.accounts:
+            account.ledger = self.db.fetch_ledger_items(account.id)
         profile.budget_groups = self.db.fetch_budget_groups(profile_id)
         profile.budget_items = self.db.fetch_budget_items(profile_id)
         return profile

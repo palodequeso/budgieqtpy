@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader } from '@mui/material';
 import * as React from 'react';
+import { useTheme } from '@mui/material/styles';
 import { Label } from 'recharts';
 import { useStore } from '../store';
 import CurrencyLabel from './currency-label';
@@ -23,7 +24,9 @@ const SCALE_CONST = 2500;
 const MARGIN_CONST = 10;
 
 export default function BudgetCards({ removeBudgetItem }) {
+    const theme = useTheme();
     const budget = useStore((state) => (state as any).budget);
+    const profile = useStore((state) => (state as any).profile);
     const [positioned, setPositioned] = React.useState([]);
     const [current, setCurrent] = React.useState(budget[0]);
     const [expensesOverlap, setExpensesOverlap] = React.useState(false);
@@ -91,7 +94,9 @@ export default function BudgetCards({ removeBudgetItem }) {
             
             }}>
                 <CardHeader sx={{
-                    backgroundColor: (current as any).type === 'expense' ? '#661111' : '#116622',
+                    backgroundColor: (current as any).type === 'expense' 
+                        ? (theme.palette.mode === 'dark' ? '#661111' : '#c62828')
+                        : (theme.palette.mode === 'dark' ? '#116622' : '#2e7d32'),
                     color: 'white',
                 }}></CardHeader>
                 <CardContent>

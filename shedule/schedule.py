@@ -59,9 +59,10 @@ class Schedule:
         # fetch some data
         self.budget_item_list = database.fetch_budget_items(profile_id)
         self.accounts = database.fetch_accounts(profile_id)
+        # Fetch and sort extrapolation items, handling None income_date values
         self.extrapolation_items: list[ExtrapolationItem] = sorted(
             database.fetch_extrapolation_items(profile_id),
-            key=operator.attrgetter("income_date"),
+            key=lambda x: x.income_date if x.income_date is not None else date.min,
             reverse=True,
         )
 
@@ -84,17 +85,49 @@ class Schedule:
                 self.ledger_entries_by_id[ledger_entry.id] = ledger_entry
 
     def build_schedule(self):
+        # Track synthetic budget items we create for one-off items
+        synthetic_budget_items = {}
+        
         # Create the schedule
         for item in self.extrapolation_items:
+            # Skip items with no income_date (unscheduled items)
+            if item.income_date is None:
+                continue
+                
             date_key = item.income_date.strftime("%Y-%m-%d")
             if self.columns.get(date_key, None) is None:
                 self.columns[date_key] = ScheduleColumn(item.income_date, 0)
 
-            # find associated budget item
+            # find associated budget item or create synthetic one for one-off items
             budget_item = self.budget_items.get(item.budget_item_id, None)
             if budget_item is None:
-                print(f"budget item {item.budget_item_id} not found")
-                continue
+                # This is a one-off item (savings transfer, one-off expense, etc.)
+                # Create a synthetic budget item for display purposes
+                from database.budget_item import BudgetItem
+                # Determine type based on amount sign
+                item_type = "Expense" if item.amount < 0 else "Income"
+                # Create unique name based on date and amount to group same-day one-offs
+                synthetic_name = f"One-off ({item.due_date.strftime('%Y-%m-%d')})"
+                # Use a synthetic ID based on date to group one-offs on same day
+                synthetic_id = f"oneoff-{item.due_date.strftime('%Y-%m-%d')}"
+                
+                budget_item = BudgetItem(
+                    name=synthetic_name,
+                    type=item_type,
+                    amount=abs(item.amount),
+                    start_date=item.due_date,
+                    end_date=item.due_date,
+                    budget_group_id=None,
+                    periods=[],
+                    id=synthetic_id,
+                    created_at=None,
+                    updated_at=None
+                )
+                
+                # Track this synthetic budget item
+                if synthetic_id not in synthetic_budget_items:
+                    synthetic_budget_items[synthetic_id] = budget_item
+                    self.budget_items[synthetic_id] = budget_item
 
             schedule_entry: ScheduleEntry = None
             if budget_item.type == "Income":
@@ -114,6 +147,13 @@ class Schedule:
             if item.ledger_entry_id is not None:
                 entry_item.ledger_entry = self.ledger_entries_by_id.get(item.ledger_entry_id, None)
             schedule_entry.add_item(entry_item)
+
+        # Add synthetic budget items to the appropriate lists for display
+        for synthetic_item in synthetic_budget_items.values():
+            if synthetic_item.type == "Expense":
+                self.expense_budget_items.append(synthetic_item)
+            else:
+                self.income_budget_items.append(synthetic_item)
 
         column_keys = list(self.columns.keys())
         column_keys = [date.fromisoformat(x) for x in column_keys]
@@ -149,9 +189,9 @@ class Schedule:
     def get_total_as_of(self, in_date: date, inclusive=True):
         # find closest income date
         closest_income_date = next(
-            d
-            for d in self.sorted_income_dates
-            if (d <= in_date if inclusive else d < in_date)
+            (d for d in self.sorted_income_dates
+             if (d <= in_date if inclusive else d < in_date)),
+            None
         )
 
         # if no income date, return starting balance

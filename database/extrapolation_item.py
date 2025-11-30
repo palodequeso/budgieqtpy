@@ -85,17 +85,23 @@ class ExtrapolationItem:
         rows = cursor.fetchall()
         output = []
         for row in rows:
+            # Handle None values for dates
+            due_date = date.fromisoformat(row[0]) if row[0] and isinstance(row[0], str) else row[0]
+            income_date = date.fromisoformat(row[2]) if row[2] and isinstance(row[2], str) else row[2]
+            created_at = datetime.fromisoformat(row[7]) if row[7] and isinstance(row[7], str) else row[7]
+            updated_at = datetime.fromisoformat(row[8]) if row[8] and isinstance(row[8], str) else row[8]
+            
             output.append(
                 ExtrapolationItem(
-                    date.fromisoformat(row[0]),
+                    due_date,
                     row[1],
-                    date.fromisoformat(row[2]),
+                    income_date,
                     row[3],
                     row[4],
                     row[5],
                     row[6],
-                    datetime.fromisoformat(row[7]),
-                    datetime.fromisoformat(row[8]),
+                    created_at,
+                    updated_at,
                 )
             )
         return output

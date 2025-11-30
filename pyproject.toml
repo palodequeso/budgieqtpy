@@ -9,18 +9,12 @@ description = "Budgie, a budget application for normies"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "antiorm",
-    "coverage",
-    "db",
-    "db-sqlite3",
-    "packaging",
     "PyQt6",
-    "PyQt6-Qt6",
-    "PyQt6_sip",
-    "requirements-parser",
-    "types-setuptools",
+    "odswriter",
 ]
 
-# [project.scripts]
-# budgie = "budgie:main"
-# tests = "coverage run -m unittest discover -s tests"
+[project.scripts]
+budgie = "main:main"
+
+[tool.setuptools]
+py-modules = ["main"]

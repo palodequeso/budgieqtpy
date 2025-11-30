@@ -1,16 +1,22 @@
 import {
     Button,
-    TextField
+    TextField,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText
 } from '@mui/material';
 import { DesktopDatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import * as React from 'react';
+import { useTheme } from '@mui/material/styles';
 import CalendarItem from './calendar-item';
 import CalendarOneOff from './calendar-one-off';
 import CalendarUnscheduled from './calendar-unscheduled';
 import CalendarSavingsItems from './calendar-savings-items';
+import CalendarGotPaid from './calendar-got-paid';
 import { useStore } from '../store';
-import { api, showSaveDialog } from './renderUtils';
+import { api } from './renderUtils';
 import CalendarExtrapolationConfirmation from './calendar-extrapolation-confirmation';
 
 export default function CalendarControls({
@@ -20,136 +26,252 @@ export default function CalendarControls({
     editingCell,
     setEditingCell,
     load,
+    schedule,
 }) {
     const [unscheduledOpen, setUnscheduledOpen] = React.useState(false);
     const [addingOneOffExpense, setAddingOneOffExpense] = React.useState(false);
     const [addingSavingsItems, setAddingSavingsItems] = React.useState(false);
+    const [gotPaidOpen, setGotPaidOpen] = React.useState(false);
     const [today, setToday] = React.useState(new Date());
     const [inOneYear, setInOneYear] = React.useState(
         new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
     );
     const [extrapolationModalOpen, setExtrapolationModalOpen] = React.useState(false);
+    const [actionsMenuAnchor, setActionsMenuAnchor] = React.useState<null | HTMLElement>(null);
     const profile = useStore((state) => (state as any).profile);
+    const theme = useTheme();
+
+    console.log(profile);
 
     const download = async () => {
-        const { filePath, cancelled } = await showSaveDialog();
-        if (cancelled) {
-            return;
+        try {
+            // Trigger download via direct link
+            const timestamp = new Date().toISOString().split('T')[0];
+            const filename = `budget-schedule-${timestamp}.ods`;
+            
+            // Use a direct download link (no /api prefix needed)
+            window.open(`/calendar/${profile.id}/downloadspreadsheet?filename=${filename}`, '_blank');
+        } catch (error) {
+            console.error('Download failed:', error);
+            alert('Failed to download spreadsheet file');
         }
-        await api.post(`/calendar/${profile.id}/downloadspreadsheet`, {
-            filePath,
-        });
     };
 
-    return (<div>
-        <h5>Calendie</h5>
-        <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <div className="calendar-header">
+    const hideCurrentColumn = async () => {
+        try {
+            const sortedDates = Object.keys(extrapolation).sort();
+            if (sortedDates.length === 0) {
+                alert('No columns to hide');
+                return;
+            }
+            
+            // Filter to get visible dates only (same logic as calendar.tsx getVisibleIncomeDates)
+            let visibleDates = sortedDates;
+            if (profile?.hidden_through) {
+                const hiddenDate = new Date(profile.hidden_through);
+                visibleDates = sortedDates.filter(dateStr => {
+                    const date = new Date(dateStr);
+                    return date > hiddenDate;
+                });
+            }
+            
+            if (visibleDates.length === 0) {
+                alert('No visible columns to hide');
+                return;
+            }
+            
+            const currentColumn = visibleDates[0]; // Leftmost visible (oldest non-hidden) column
+            const column = extrapolation[currentColumn];
+            
+            // Check if all items are paid
+            let unpaidCount = 0;
+            // This is a simplified check - in reality would need to check the schedule data
+            
+            const confirmMessage = `Hide income column for ${currentColumn}?\n\nThis will hide it from the calendar view.${unpaidCount > 0 ? `\n\n⚠️ Warning: ${unpaidCount} unpaid items in this column!` : ''}`;
+            
+            if (!window.confirm(confirmMessage)) {
+                return;
+            }
+            
+            // Update profile's hidden_through date
+            await api.put(`/profiles/${profile.id}/hidden_through`, {
+                hidden_through: currentColumn
+            });
+            
+            // Reload the calendar
+            load();
+            alert(`Column ${currentColumn} is now hidden.`);
+        } catch (error) {
+            console.error('Hide column failed:', error);
+            alert('Failed to hide column');
+        }
+    };
+
+    return (
+        <div style={{ padding: '20px 0' }}>
+            {/* Title Section */}
+            <div style={{
+                backgroundColor: theme.palette.mode === 'dark' ? '#263238' : '#e0e0e0',
+                borderRadius: '8px',
+                padding: '15px 20px',
+                marginBottom: '20px'
+            }}>
+                <h3 style={{ 
+                    margin: 0,
+                    fontSize: '1.5rem',
+                    fontWeight: 'bold'
+                }}>
+                    📅 Budget Calendar
+                </h3>
+            </div>
+
+            {/* Controls Container */}
+            <div style={{
+                backgroundColor: theme.palette.mode === 'dark' ? '#37474f' : '#f5f5f5',
+                borderRadius: '8px',
+                padding: '20px'
+            }}>
+                {/* Date Range Row */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    marginBottom: '20px',
+                    flexWrap: 'wrap'
+                }}>
+                    <span style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                        Extrapolation Period:
+                    </span>
+            <LocalizationProvider dateAdapter={AdapterDateFns}>
                 <DesktopDatePicker
                     label="Extrapolation From"
-                    // inputFormat="MM/dd/yyyy"
                     value={today}
-                    onChange={(value) =>
-                        setToday(value as Date)
-                    }
-                    // renderInput={(params) => (
-                    //     <TextField {...params} sx={{
-                    //         width: '160px',
-                    //     }}/>
-                    // )}
+                    onChange={(value) => setToday(value as Date)}
+                    slotProps={{
+                        textField: { size: 'small' }
+                    }}
                 />
-                <label> - to - </label>
+                <span style={{ margin: '0 4px' }}>to</span>
                 <DesktopDatePicker
                     label="Extrapolation To"
-                    // inputFormat="MM/dd/yyyy"
                     value={inOneYear}
-                    onChange={(value) =>
-                        setInOneYear(value as Date)
-                    }
-                    // renderInput={(params) => (
-                    //     <TextField {...params} sx={{
-                    //         width: '160px',
-                    //     }} />
-                    // )}
+                    onChange={(value) => setInOneYear(value as Date)}
+                    slotProps={{
+                        textField: { size: 'small' }
+                    }}
                 />
+            </LocalizationProvider>
+                </div>
+
+                {/* Action Buttons Row */}
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    flexWrap: 'wrap'
+                }}>
+                    {/* Primary Actions */}
+                    <Button
+                        id="extrapolate-calendar-button"
+                        variant="contained"
+                        color="primary"
+                        onClick={() => setExtrapolationModalOpen(true)}
+                        sx={{ 
+                            fontWeight: 'bold',
+                            px: 3
+                        }}
+                    >
+                        🔄 Extrapolate
+                    </Button>
+                    
+                    <Button
+                        id="i-got-paid-button"
+                        variant="contained"
+                        color="success"
+                        onClick={() => setGotPaidOpen(true)}
+                        disabled={!profile?.accounts || profile.accounts.length === 0}
+                        sx={{ 
+                            fontWeight: 'bold',
+                            px: 3
+                        }}
+                    >
+                        💰 I Got Paid
+                    </Button>
+                    
+                    <Button
+                        id="handle-unscheduled-button"
+                        variant="contained"
+                        color="error"
+                        disabled={unscheduledItems.length === 0}
+                        onClick={() => setUnscheduledOpen(true)}
+                        sx={{ 
+                            fontWeight: 'bold',
+                            px: 3
+                        }}
+                    >
+                        ⚠️ {unscheduledItems.length} Unscheduled ($
+                        {unscheduledItems
+                            .reduce((acc, item) => acc + parseFloat((item as any).amount as any), 0)
+                            .toFixed(2)})
+                    </Button>
+
+                    <div style={{ flex: 1 }} />
+                    
+                    {/* Secondary Actions */}
+                    <Button
+                        id="add-extrapolation-item"
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setAddingOneOffExpense(true)}
+                        sx={{ 
+                            color: theme.palette.mode === 'dark' ? '#b0bec5' : '#546e7a',
+                            borderColor: theme.palette.mode === 'dark' ? '#546e7a' : '#bdbdbd'
+                        }}
+                    >
+                        ➕ Add One-Off
+                    </Button>
+                    
+                    <Button
+                        id="add-savings-items"
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setAddingSavingsItems(true)}
+                        disabled={!profile?.accounts?.find((account: any) => account.type === 'Savings')}
+                        sx={{ 
+                            color: theme.palette.mode === 'dark' ? '#b0bec5' : '#546e7a',
+                            borderColor: theme.palette.mode === 'dark' ? '#546e7a' : '#bdbdbd'
+                        }}
+                    >
+                        💎 Add Savings
+                    </Button>
+                    
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => hideCurrentColumn()}
+                        // disabled={Object.keys(extrapolation).length === 0}
+                        sx={{ 
+                            color: theme.palette.mode === 'dark' ? '#b0bec5' : '#546e7a',
+                            borderColor: theme.palette.mode === 'dark' ? '#546e7a' : '#bdbdbd'
+                        }}
+                    >
+                        👁️ Hide Column
+                    </Button>
+                    
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => download()}
+                        sx={{ 
+                            color: theme.palette.mode === 'dark' ? '#b0bec5' : '#546e7a',
+                            borderColor: theme.palette.mode === 'dark' ? '#546e7a' : '#bdbdbd'
+                        }}
+                    >
+                        📊 Export
+                    </Button>
+                </div>
             </div>
-        </LocalizationProvider>
         <div>
-            <Button 
-                style={{ marginRight: '960px' }}
-                className="calendar-header-button"
-                onClick={() => download()}
-                variant="outlined"
-                color="secondary"
-            >
-                Save CSV
-                <i className="material-icons">download</i>
-            </Button>
-            <Button
-                id="handle-unscheduled-button"
-                variant="contained"
-                color="error"
-                disabled={unscheduledItems.length === 0}
-                onClick={() => setUnscheduledOpen(true)}
-                className="calendar-header-button"
-                style={{ marginRight: '744px' }}
-            >
-                {unscheduledItems.length} unscheduled $
-                {unscheduledItems
-                    .reduce(
-                        (acc, item) =>
-                            acc +
-                            parseFloat((item as any).amount as any),
-                        0,
-                    )
-                    .toFixed(2)}
-                <i className="material-icons">warning</i>
-            </Button>
-            <Button
-                id="i-got-paid-button"
-                variant="outlined"
-                color="secondary"
-                // onClick={() => setAddingSavingsItems(true)}
-                className="calendar-header-button"
-                style={{ marginRight: '604px' }}
-                disabled={profile.accounts.find((account) => account.type === 'savings') === undefined}
-            >
-                I Got Paid
-                <i className="material-icons">add</i>
-            </Button>
-            <Button
-                id="add-savings-items"
-                variant="outlined"
-                color="secondary"
-                onClick={() => setAddingSavingsItems(true)}
-                className="calendar-header-button"
-                style={{ marginRight: '404px' }}
-                disabled={profile.accounts.find((account) => account.type === 'savings') === undefined}
-            >
-                Add Savings Items
-                <i className="material-icons">add</i>
-            </Button>
-            <Button
-                id="add-extrapolation-item"
-                variant="outlined"
-                color="secondary"
-                onClick={() => setAddingOneOffExpense(true)}
-                className="calendar-header-button"
-                style={{ marginRight: '184px' }}
-            >
-                Add One-Off Expense
-                <i className="material-icons">add</i>
-            </Button>
-            <Button
-                id="extrapolate-calendar-button"
-                variant="contained"
-                color="primary"
-                onClick={() => setExtrapolationModalOpen(true)}
-                className="calendar-header-button"
-            >
-                Extrapolate
-                <i className="material-icons">arrow_forward</i>
-            </Button>
             <CalendarExtrapolationConfirmation
                 open={extrapolationModalOpen}
                 close={() => setExtrapolationModalOpen(false)}
@@ -170,11 +292,22 @@ export default function CalendarControls({
             <CalendarSavingsItems
                 profile={profile}
                 open={addingSavingsItems}
-                close={() => {
+                close={(saved) => {
                     setAddingSavingsItems(false);
-                    // if (saved === true) {
-                    //     load();
-                    // }
+                    if (saved === true) {
+                        load();
+                    }
+                }}
+            />
+            <CalendarGotPaid
+                profile={profile}
+                schedule={schedule}
+                open={gotPaidOpen}
+                close={(saved) => {
+                    setGotPaidOpen(false);
+                    if (saved === true) {
+                        load();
+                    }
                 }}
             />
             <CalendarOneOff

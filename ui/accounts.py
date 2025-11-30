@@ -11,8 +11,13 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QHeaderView,
+    QDialog,
+    QDateEdit,
+    QMessageBox,
+    QFrame,
 )
-from PyQt6.QtGui import QPalette, QColor
+from PyQt6.QtCore import QDate, Qt
+from PyQt6.QtGui import QPalette, QColor, QFont
 from database.account import Account
 from database.database import Database
 from database.ledger_entry import LedgerEntry
@@ -42,35 +47,104 @@ class Accounts(QStackedWidget):
 
     def render_account(self, account):
         widget = QWidget()
-        widget.setPalette(QPalette(QColor(ACCOUNT_COLORS[account.account_type])))
-        widget.setAutoFillBackground(True)
-
-        widget.setContentsMargins(10, 10, 10, 10)
-        widget.setFixedWidth(250)
-        widget.setFixedHeight(200)
+        
+        # Determine icon and color based on account type
+        account_icons = {
+            "Checking": "💳",
+            "Savings": "🏦",
+            "Credit Card": "💎"
+        }
+        icon = account_icons.get(account.account_type, "💰")
+        
+        widget.setStyleSheet(f"""
+            QWidget {{
+                border: 2px solid;
+                border-radius: 10px;
+                padding: 15px;
+            }}
+            QWidget:hover {{
+                border-color: #1976d2;
+            }}
+        """)
+        widget.setMinimumWidth(280)
+        widget.setMinimumHeight(200)
+        widget.setMaximumWidth(300)
 
         vl = QVBoxLayout()
+        vl.setSpacing(8)
 
-        name = QLabel("Name: " + account.name)
-        vl.addWidget(name)
+        # Account name with icon
+        name_layout = QHBoxLayout()
+        icon_label = QLabel(icon)
+        icon_font = QFont()
+        icon_font.setPointSize(24)
+        icon_label.setFont(icon_font)
+        name_layout.addWidget(icon_label)
+        
+        name = QLabel(account.name)
+        name_font = QFont()
+        name_font.setPointSize(14)
+        name_font.setBold(True)
+        name.setFont(name_font)
+        name_layout.addWidget(name)
+        name_layout.addStretch(1)
+        vl.addLayout(name_layout)
+        
+        # Divider
+        divider = QFrame()
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setStyleSheet("")
+        vl.addWidget(divider)
 
-        account_type = QLabel("Type: " + account.account_type)
+        # Account type
+        account_type = QLabel(f"Type: {account.account_type}")
+        account_type.setStyleSheet("font-size: 12px;")
         vl.addWidget(account_type)
 
+        # Current Balance label
+        balance_title = QLabel("Current Balance")
+        balance_title.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 3px;")
+        vl.addWidget(balance_title)
+
+        # Balance
         ledger_entries = self.db.fetch_ledger_items(account.id)
         balance = 0
         for entry in ledger_entries:
             balance += entry.amount
-        balance_label = QLabel("Balance: ${:,.2f}".format(balance))
+        balance_label = QLabel(f"${balance:,.2f}")
+        balance_font = QFont()
+        balance_font.setPointSize(16)
+        balance_font.setBold(True)
+        balance_label.setFont(balance_font)
+        balance_label.setStyleSheet("color: #4caf50; margin: 2px 0 5px 0;")
         vl.addWidget(balance_label)
+        
+        # Ledger entry count
+        entry_count = QLabel(f"{len(ledger_entries)} ledger entries")
+        entry_count.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        vl.addWidget(entry_count)
 
-        created_at = QLabel("Created: " + account.created_at.strftime("%Y-%m-%d"))
-        vl.addWidget(created_at)
+        vl.addStretch(1)
 
-        updated_at = QLabel("Updated: " + account.updated_at.strftime("%Y-%m-%d"))
-        vl.addWidget(updated_at)
-
-        edit_button = QPushButton("View")
+        # View button
+        edit_button = QPushButton("View Details")
+        edit_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1976d2;
+                color: white;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 5px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #1565c0;
+            }
+            QPushButton:pressed {
+                background-color: #0d47a1;
+            }
+        """)
         edit_button.clicked.connect(
             lambda button_clicked, a=account: self.select_account(a)
         )
@@ -86,86 +160,261 @@ class Accounts(QStackedWidget):
             self.removeWidget(self.account_widget)
         self.account_widget = QWidget()
         vl = QVBoxLayout()
+        vl.setSpacing(20)
+        vl.setContentsMargins(20, 20, 20, 20)
 
-        bhl = QHBoxLayout()
-        bhl.addStretch(1)
-
-        back_button = QPushButton("Back")
-        bhl.addWidget(back_button)
+        # Header section with back button and title
+        header_container = QWidget()
+        header_container.setStyleSheet("border-radius: 8px; padding: 15px;")
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(10)
+        
+        # Back button row
+        back_row = QHBoxLayout()
+        back_button = QPushButton("⬅️ Back to Accounts")
+        back_button.setStyleSheet("""
+            QPushButton {
+                background-color: #546e7a;
+                color: white;
+                padding: 8px 16px;
+                border: none;
+                border-radius: 5px;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #607d8b;
+            }
+        """)
         back_button.clicked.connect(lambda: self.setCurrentIndex(0))
+        back_row.addWidget(back_button)
+        back_row.addStretch(1)
+        header_layout.addLayout(back_row)
+        
+        # Account icon and name
+        account_icons = {
+            "Checking": "💳",
+            "Savings": "🏦",
+            "Credit Card": "💎"
+        }
+        icon = account_icons.get(account.account_type, "💰")
+        
+        title_row = QHBoxLayout()
+        icon_label = QLabel(icon)
+        icon_font = QFont()
+        icon_font.setPointSize(28)
+        icon_label.setFont(icon_font)
+        title_row.addWidget(icon_label)
+        
+        account_title = QLabel(account.name)
+        title_font = QFont()
+        title_font.setPointSize(20)
+        title_font.setBold(True)
+        account_title.setFont(title_font)
+        title_row.addWidget(account_title)
+        title_row.addStretch(1)
+        header_layout.addLayout(title_row)
+        
+        header_container.setLayout(header_layout)
+        vl.addWidget(header_container)
 
-        vl.addLayout(bhl)
-
-        name = QLabel("Name: " + account.name)
-        vl.addWidget(name)
-
-        account_type = QLabel("Type: " + account.account_type)
-        vl.addWidget(account_type)
-
+        # Account info section
+        info_container = QWidget()
+        info_container.setStyleSheet("border-radius: 8px; padding: 20px;")
+        info_layout = QHBoxLayout()
+        info_layout.setSpacing(30)
+        
+        # Type column
+        type_col = QVBoxLayout()
+        type_label = QLabel("Account Type")
+        type_label.setStyleSheet("font-size: 12px; font-weight: bold;")
+        type_col.addWidget(type_label)
+        type_value = QLabel(account.account_type)
+        type_value_font = QFont()
+        type_value_font.setPointSize(14)
+        type_value.setFont(type_value_font)
+        type_col.addWidget(type_value)
+        info_layout.addLayout(type_col)
+        
+        # Balance column
         ledger_items: list[LedgerEntry] = self.db.fetch_ledger_items(account.id)
         balance = 0
         for entry in ledger_items:
             balance += entry.amount
-        balance_label = QLabel("Balance: ${:,.2f}".format(account.balance))
-        vl.addWidget(balance_label)
-
-        created_at = QLabel("Created: " + account.created_at.strftime("%Y-%m-%d"))
-        vl.addWidget(created_at)
-
-        last_row_hl = QHBoxLayout()
-        updated_at = QLabel("Updated: " + account.updated_at.strftime("%Y-%m-%d"))
-        last_row_hl.addWidget(updated_at)
-        last_row_hl.addStretch(1)
-
-        add_ledger_entry_button = QPushButton("Add Ledger Entry")
-        last_row_hl.addWidget(add_ledger_entry_button)
-        # add_ledger_entry_button.clicked.connect(
-        #     lambda: self.setCurrentIndex(2)
-        # )
-
-        vl.addLayout(last_row_hl)
-
-        ledger_table = QTableWidget()
-        ledger_table.setColumnCount(8)
-        ledger_table.setRowCount(len(ledger_items))
-        ledger_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        ledger_table.horizontalHeader().setStretchLastSection(True)
-
-        ledger_table.setHorizontalHeaderLabels(
-            [
-                "Id",
-                "Name",
-                "Date",
-                "Income Date",
-                "Type",
-                "Amount",
-                "Created",
-                "Updated",
-            ]
+        
+        balance_col = QVBoxLayout()
+        balance_title = QLabel("Current Balance")
+        balance_title.setStyleSheet("font-size: 12px; font-weight: bold;")
+        balance_col.addWidget(balance_title)
+        balance_label = QLabel(f"${balance:,.2f}")
+        balance_font = QFont()
+        balance_font.setPointSize(18)
+        balance_font.setBold(True)
+        balance_label.setFont(balance_font)
+        balance_label.setStyleSheet("color: #4caf50;")
+        balance_col.addWidget(balance_label)
+        info_layout.addLayout(balance_col)
+        
+        # Ledger entries column
+        entries_col = QVBoxLayout()
+        entries_title = QLabel("Ledger Entries")
+        entries_title.setStyleSheet("font-size: 12px; font-weight: bold;")
+        entries_col.addWidget(entries_title)
+        entries_value = QLabel(str(len(ledger_items)))
+        entries_value_font = QFont()
+        entries_value_font.setPointSize(14)
+        entries_value.setFont(entries_value_font)
+        entries_col.addWidget(entries_value)
+        info_layout.addLayout(entries_col)
+        
+        info_layout.addStretch(1)
+        
+        # Add Ledger Entry button
+        add_ledger_entry_button = QPushButton("➕ Add Ledger Entry")
+        add_ledger_entry_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1976d2;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1565c0;
+            }
+            QPushButton:pressed {
+                background-color: #0d47a1;
+            }
+        """)
+        add_ledger_entry_button.clicked.connect(
+            lambda: self.add_ledger_entry(account)
         )
-        idx = 0
-        for ledger_item in ledger_items:
-            ledger_table.setItem(idx, 0, QTableWidgetItem(str(ledger_item.id)))
-            ledger_table.setItem(idx, 1, QTableWidgetItem(ledger_item.name))
-            ledger_table.setItem(
-                idx, 2, QTableWidgetItem(ledger_item.paid_date.strftime("%Y-%m-%d"))
-            )
-            ledger_table.setItem(
-                idx, 3, QTableWidgetItem(ledger_item.income_date.strftime("%Y-%m-%d"))
-            )
-            ledger_table.setItem(idx, 4, QTableWidgetItem(ledger_item.type))
-            ledger_table.setItem(
-                idx, 5, QTableWidgetItem("${:,.2f}".format(ledger_item.amount))
-            )
-            ledger_table.setItem(
-                idx, 6, QTableWidgetItem(ledger_item.created_at.strftime("%Y-%m-%d"))
-            )
-            ledger_table.setItem(
-                idx, 7, QTableWidgetItem(ledger_item.updated_at.strftime("%Y-%m-%d"))
-            )
-            idx += 1
+        info_layout.addWidget(add_ledger_entry_button)
+        
+        info_container.setLayout(info_layout)
+        vl.addWidget(info_container)
 
-        vl.addWidget(ledger_table)
+        # Ledger table section
+        ledger_label = QLabel(f"📊 Ledger Entries ({len(ledger_items)})")
+        ledger_label_font = QFont()
+        ledger_label_font.setPointSize(16)
+        ledger_label_font.setBold(True)
+        ledger_label.setFont(ledger_label_font)
+        ledger_label.setStyleSheet("margin-top: 10px;")
+        vl.addWidget(ledger_label)
+        
+        if ledger_items:
+            ledger_table = QTableWidget()
+            ledger_table.setColumnCount(10)
+            ledger_table.setRowCount(len(ledger_items))
+            ledger_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+            
+            # Style the table
+            ledger_table.setStyleSheet("""
+                QTableWidget {
+                    border: 2px solid;
+                    border-radius: 8px;
+                }
+                QTableWidget::item {
+                    padding: 8px;
+                }
+                QTableWidget::item:selected {
+                    background-color: #1976d2;
+                }
+                QHeaderView::section {
+                    padding: 10px;
+                    border: none;
+                    font-weight: bold;
+                }
+            """)
+            
+            ledger_table.setHorizontalHeaderLabels(
+                [
+                    "ID",
+                    "Name",
+                    "Paid Date",
+                    "Income Date",
+                    "Type",
+                    "Amount",
+                    "Created",
+                    "Updated",
+                    "Edit",
+                    "Delete",
+                ]
+            )
+            idx = 0
+            for ledger_item in ledger_items:
+                ledger_table.setItem(idx, 0, QTableWidgetItem(str(ledger_item.id)))
+                ledger_table.setItem(idx, 1, QTableWidgetItem(ledger_item.name))
+                ledger_table.setItem(
+                    idx, 2, QTableWidgetItem(ledger_item.paid_date.strftime("%Y-%m-%d"))
+                )
+                ledger_table.setItem(
+                    idx, 3, QTableWidgetItem(ledger_item.income_date.strftime("%Y-%m-%d"))
+                )
+                ledger_table.setItem(idx, 4, QTableWidgetItem(ledger_item.type))
+                ledger_table.setItem(
+                    idx, 5, QTableWidgetItem("${:,.2f}".format(ledger_item.amount))
+                )
+                ledger_table.setItem(
+                    idx, 6, QTableWidgetItem(ledger_item.created_at.strftime("%Y-%m-%d"))
+                )
+                ledger_table.setItem(
+                    idx, 7, QTableWidgetItem(ledger_item.updated_at.strftime("%Y-%m-%d"))
+                )
+                
+                # Add Edit button
+                edit_button = QPushButton("✏️ Edit")
+                edit_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #1976d2;
+                        color: white;
+                        padding: 6px 12px;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 11px;
+                    }
+                    QPushButton:hover {
+                        background-color: #1565c0;
+                    }
+                """)
+                edit_button.clicked.connect(
+                    lambda checked=False, item=ledger_item, acc=account: self.edit_ledger_item(item, acc)
+                )
+                ledger_table.setCellWidget(idx, 8, edit_button)
+                
+                # Add Delete button
+                delete_button = QPushButton("🗑️ Delete")
+                delete_button.setStyleSheet("""
+                    QPushButton {
+                        background-color: #d32f2f;
+                        color: white;
+                        padding: 6px 12px;
+                        border: none;
+                        border-radius: 4px;
+                        font-size: 11px;
+                    }
+                    QPushButton:hover {
+                        background-color: #b71c1c;
+                    }
+                """)
+                delete_button.clicked.connect(
+                    lambda checked=False, item=ledger_item, acc=account: self._delete_ledger_item(item, None, acc)
+                )
+                ledger_table.setCellWidget(idx, 9, delete_button)
+                
+                # Set row height to accommodate buttons
+                ledger_table.setRowHeight(idx, 45)
+                idx += 1
+
+            vl.addWidget(ledger_table)
+        else:
+            # No ledger entries message
+            no_entries = QLabel("No ledger entries yet. Add one to get started!")
+            no_entries.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_entries.setStyleSheet("font-size: 14px; padding: 40px; border-radius: 8px;")
+            vl.addWidget(no_entries)
 
         self.account_widget.setLayout(vl)
         self.account_widget.show()
@@ -176,24 +425,70 @@ class Accounts(QStackedWidget):
     def render_accounts(self):
         widget = QWidget()
         vl = QVBoxLayout()
+        vl.setSpacing(20)
+        vl.setContentsMargins(20, 20, 20, 20)
 
-        l = QHBoxLayout()
-
-        toolsRow = QHBoxLayout()
-        toolsRow.addStretch(1)
-        createButton = QPushButton("Create")
+        # Title section
+        title_container = QWidget()
+        title_container.setStyleSheet("border-radius: 8px; padding: 15px;")
+        title_layout = QHBoxLayout()
+        title_layout.setContentsMargins(10, 5, 10, 5)
+        
+        accounts_title = QLabel("💼 Accounts")
+        accounts_title_font = QFont()
+        accounts_title_font.setPointSize(18)
+        accounts_title_font.setBold(True)
+        accounts_title.setFont(accounts_title_font)
+        title_layout.addWidget(accounts_title)
+        title_layout.addStretch(1)
+        
+        # Add Account button in title
+        createButton = QPushButton("➕ Add Account")
+        createButton.setStyleSheet("""
+            QPushButton {
+                background-color: #1976d2;
+                color: white;
+                padding: 10px 20px;
+                border: none;
+                border-radius: 5px;
+                font-size: 13px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #1565c0;
+            }
+            QPushButton:pressed {
+                background-color: #0d47a1;
+            }
+        """)
         createButton.clicked.connect(lambda: self.setCurrentIndex(1))
-        toolsRow.addWidget(createButton)
-        vl.addLayout(toolsRow)
+        title_layout.addWidget(createButton)
+        
+        title_container.setLayout(title_layout)
+        vl.addWidget(title_container)
 
+        # Accounts grid
         self.accounts = self.db.fetch_accounts(self.selected_profile.id)
-        for account in self.accounts:
-            account_widget = self.render_account(account)
-            l.addWidget(account_widget)
-
-        l.addStretch(1)
-
-        vl.addLayout(l)
+        
+        if self.accounts:
+            accounts_container = QWidget()
+            accounts_layout = QHBoxLayout()
+            accounts_layout.setSpacing(20)
+            accounts_layout.addStretch(1)
+            
+            for account in self.accounts:
+                account_widget = self.render_account(account)
+                accounts_layout.addWidget(account_widget)
+            
+            accounts_layout.addStretch(1)
+            accounts_container.setLayout(accounts_layout)
+            vl.addWidget(accounts_container)
+        else:
+            # No accounts message
+            no_accounts_label = QLabel("No accounts yet. Click 'Add Account' to create one.")
+            no_accounts_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_accounts_label.setStyleSheet("font-size: 14px; padding: 40px;")
+            vl.addWidget(no_accounts_label)
 
         vl.addStretch(1)
 
@@ -205,50 +500,501 @@ class Accounts(QStackedWidget):
     def render_create_account(self):
         widget = QWidget()
         vl = QVBoxLayout()
+        vl.setSpacing(20)
+        vl.setContentsMargins(20, 20, 20, 20)
 
-        # vl.addStretch(1)
-
+        # Header Section
+        header_container = QWidget()
+        header_container.setStyleSheet("border-radius: 8px; padding: 20px;")
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(15)
+        
+        # Back button
+        back_button = QPushButton("⬅️ Back to Accounts")
+        back_button.setStyleSheet("""
+            QPushButton {
+                background-color: transparent;
+                color: white;
+                padding: 8px 16px;
+                border: 2px solid #546e7a;
+                border-radius: 5px;
+                font-size: 12px;
+                text-align: left;
+            }
+            QPushButton:hover {
+                border-color: #78909c;
+                background-color: rgba(255, 255, 255, 0.08);
+            }
+        """)
+        back_button.clicked.connect(lambda: self.setCurrentIndex(0))
+        back_button.setMaximumWidth(180)
+        header_layout.addWidget(back_button)
+        
+        # Title with icon
+        title_row = QHBoxLayout()
+        icon_label = QLabel("💳")
+        icon_font = QFont()
+        icon_font.setPointSize(32)
+        icon_label.setFont(icon_font)
+        title_row.addWidget(icon_label)
+        
+        title_label = QLabel("New Account")
+        title_font = QFont()
+        title_font.setPointSize(20)
+        title_font.setBold(True)
+        title_label.setFont(title_font)
+        title_label.setStyleSheet("color: white;")
+        title_row.addWidget(title_label)
+        title_row.addStretch(1)
+        header_layout.addLayout(title_row)
+        
+        # Form fields in horizontal layout
+        form_layout = QHBoxLayout()
+        form_layout.setSpacing(20)
+        form_layout.setContentsMargins(0, 20, 0, 0)
+        
+        # Account Name field
+        name_layout = QVBoxLayout()
+        name_layout.setSpacing(6)
+        
+        name_label = QLabel("Account Name")
+        name_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+        name_layout.addWidget(name_label)
+        
         name = QLineEdit()
-        name.setPlaceholderText("Name")
-        vl.addWidget(name)
-
+        name.setPlaceholderText("")
+        name.setStyleSheet("""
+            QLineEdit {
+                padding: 9px 12px;
+                border: 1px solid;
+                border-radius: 4px;
+                font-size: 13px;
+                min-height: 18px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1976d2;
+            }
+        """)
+        name.setMinimumWidth(400)
+        name.setFixedHeight(38)
+        name_layout.addWidget(name)
+        form_layout.addLayout(name_layout)
+        
+        # Account Type field
+        type_layout = QVBoxLayout()
+        type_layout.setSpacing(6)
+        
+        type_label = QLabel("Account Type")
+        type_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+        type_layout.addWidget(type_label)
+        
         account_type = QComboBox()
         account_type.addItems(["Checking", "Savings", "Credit Card"])
-        vl.addWidget(account_type)
-
-        balance = QLineEdit()
-        balance.setPlaceholderText("Balance")
-        vl.addWidget(balance)
-
-        bhl = QHBoxLayout()
-
-        create_button = QPushButton("Create")
-        bhl.addWidget(create_button)
-
-        cancel_button = QPushButton("Cancel")
-        bhl.addWidget(cancel_button)
-
-        vl.addLayout(bhl)
-
+        account_type.setFixedHeight(38)
+        account_type.setMinimumWidth(200)
+        type_layout.addWidget(account_type)
+        form_layout.addLayout(type_layout)
+        
+        # Balance field
+        balance_layout = QVBoxLayout()
+        balance_layout.setSpacing(6)
+        
+        balance_label = QLabel("Starting Balance")
+        balance_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+        balance_layout.addWidget(balance_label)
+        
+        # Balance input with dollar sign prefix
+        balance_input_container = QWidget()
+        balance_input_layout = QHBoxLayout()
+        balance_input_layout.setSpacing(0)
+        balance_input_layout.setContentsMargins(0, 0, 0, 0)
+        
+        dollar_prefix = QLabel("$")
+        dollar_prefix.setFixedHeight(38)
+        dollar_prefix.setFixedWidth(30)
+        dollar_prefix.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        dollar_prefix.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+                border: 1px solid;
+                border-right: none;
+                border-radius: 4px 0px 0px 4px;
+                padding: 9px 8px;
+            }
+        """)
+        balance_input_layout.addWidget(dollar_prefix)
+        
+        balance = QLineEdit("0.00")
+        balance.setStyleSheet("""
+            QLineEdit {
+                padding: 9px 12px;
+                border: 1px solid;
+                border-left: none;
+                border-radius: 0px 4px 4px 0px;
+                font-size: 13px;
+            }
+            QLineEdit:focus {
+                border: 2px solid #1976d2;
+                border-left: 1px solid #1976d2;
+            }
+        """)
+        balance.setFixedWidth(185)
+        balance.setFixedHeight(38)
+        balance_input_layout.addWidget(balance)
+        
+        balance_input_container.setLayout(balance_input_layout)
+        balance_layout.addWidget(balance_input_container)
+        form_layout.addLayout(balance_layout)
+        
+        # Save button aligned to bottom
+        button_layout = QVBoxLayout()
+        button_layout.setSpacing(0)
+        # Add spacing to match label height
+        button_spacer = QLabel("")
+        button_spacer.setFixedHeight(17)  # Match label height with spacing
+        button_layout.addWidget(button_spacer)
+        
+        create_button = QPushButton("💾 SAVE ACCOUNT")
+        create_button.setStyleSheet("""
+            QPushButton {
+                background-color: #1976d2;
+                color: white;
+                padding: 10px 24px;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+                text-transform: uppercase;
+            }
+            QPushButton:hover {
+                background-color: #1565c0;
+            }
+            QPushButton:pressed {
+                background-color: #0d47a1;
+            }
+        """)
+        create_button.setFixedHeight(38)
+        create_button.setFixedWidth(160)
         create_button.clicked.connect(
             lambda: self.create_account(
                 name.text(), account_type.currentText(), balance.text()
             )
         )
-        cancel_button.clicked.connect(lambda: self.setCurrentIndex(0))
-
+        button_layout.addWidget(create_button)
+        form_layout.addLayout(button_layout)
+        
+        header_layout.addLayout(form_layout)
+        
+        header_container.setLayout(header_layout)
+        vl.addWidget(header_container)
+        
         vl.addStretch(1)
 
-        hl = QHBoxLayout()
-        hl.addStretch(1)
-        hl.addLayout(vl)
-        hl.addStretch(1)
-
-        widget.setLayout(hl)
+        widget.setLayout(vl)
         widget.show()
 
         self.addWidget(widget)
 
+    def edit_ledger_item(self, ledger_item: LedgerEntry, account: Account):
+        """Open dialog to edit a ledger item."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"Edit Ledger Entry - {ledger_item.name}")
+        dialog.setMinimumWidth(500)
+        
+        layout = QVBoxLayout()
+        
+        # Name
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("Name:"))
+        name_input = QLineEdit(ledger_item.name)
+        name_layout.addWidget(name_input)
+        layout.addLayout(name_layout)
+        
+        # Amount
+        amount_layout = QHBoxLayout()
+        amount_layout.addWidget(QLabel("Amount:"))
+        amount_input = QLineEdit(str(ledger_item.amount))
+        amount_layout.addWidget(amount_input)
+        layout.addLayout(amount_layout)
+        
+        # Type (Income/Expense)
+        type_layout = QHBoxLayout()
+        type_layout.addWidget(QLabel("Type:"))
+        type_input = QComboBox()
+        type_input.addItems(["Income", "Expense"])
+        type_input.setCurrentText(ledger_item.type)
+        type_layout.addWidget(type_input)
+        layout.addLayout(type_layout)
+        
+        # Paid Date
+        paid_date_layout = QHBoxLayout()
+        paid_date_layout.addWidget(QLabel("Paid Date:"))
+        paid_date_input = QDateEdit()
+        paid_date_input.setCalendarPopup(True)
+        paid_date_input.setDate(QDate.fromString(ledger_item.paid_date.strftime("%Y-%m-%d"), "yyyy-MM-dd"))
+        paid_date_layout.addWidget(paid_date_input)
+        layout.addLayout(paid_date_layout)
+        
+        # Income Date
+        income_date_layout = QHBoxLayout()
+        income_date_layout.addWidget(QLabel("Income Date:"))
+        income_date_input = QDateEdit()
+        income_date_input.setCalendarPopup(True)
+        income_date_input.setDate(QDate.fromString(ledger_item.income_date.strftime("%Y-%m-%d"), "yyyy-MM-dd"))
+        income_date_layout.addWidget(income_date_input)
+        layout.addLayout(income_date_layout)
+        
+        # Account selector
+        account_layout = QHBoxLayout()
+        account_layout.addWidget(QLabel("Account:"))
+        account_selector = QComboBox()
+        accounts = self.db.fetch_accounts(self.selected_profile.id)
+        for acc in accounts:
+            account_selector.addItem(acc.name)
+        # Set current account
+        current_account_name = next((a.name for a in accounts if a.id == ledger_item.account_id), account.name)
+        account_selector.setCurrentText(current_account_name)
+        account_layout.addWidget(account_selector)
+        layout.addLayout(account_layout)
+        
+        layout.addStretch(1)
+        
+        # Buttons
+        button_layout = QHBoxLayout()
+        button_layout.addStretch(1)
+        
+        delete_button = QPushButton("Delete")
+        delete_button.setStyleSheet("background-color: #8B0000; color: white;")
+        delete_button.clicked.connect(
+            lambda: self._delete_ledger_item(ledger_item, dialog, account)
+        )
+        button_layout.addWidget(delete_button)
+        
+        cancel_button = QPushButton("Cancel")
+        cancel_button.clicked.connect(dialog.reject)
+        button_layout.addWidget(cancel_button)
+        
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(
+            lambda: self._save_ledger_item(
+                ledger_item.id,
+                name_input.text(),
+                paid_date_input.date().toString("yyyy-MM-dd"),
+                income_date_input.date().toString("yyyy-MM-dd"),
+                float(amount_input.text()),
+                accounts[account_selector.currentIndex()].id,
+                dialog,
+                account
+            )
+        )
+        button_layout.addWidget(save_button)
+        
+        layout.addLayout(button_layout)
+        dialog.setLayout(layout)
+        dialog.exec()
+    
+    def _save_ledger_item(self, ledger_id, name, paid_date, income_date, amount, account_id, dialog, original_account):
+        """Save updated ledger item."""
+        try:
+            self.db.update_ledger_entry(ledger_id, name, paid_date, income_date, amount, account_id)
+            QMessageBox.information(
+                self,
+                "Success",
+                "Ledger entry updated successfully."
+            )
+            dialog.accept()
+            # Refresh the account view
+            self.select_account(original_account)
+        except Exception as e:
+            QMessageBox.critical(
+                self,
+                "Error",
+                f"Failed to update ledger entry: {str(e)}"
+            )
+    
+    def _delete_ledger_item(self, ledger_item, dialog, account):
+        """Delete ledger item with confirmation."""
+        reply = QMessageBox.question(
+            self,
+            "Delete Ledger Entry",
+            f"Are you sure you want to delete ledger entry '{ledger_item.name}'?\n\nThis action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+        
+        if reply == QMessageBox.StandardButton.Yes:
+            try:
+                self.db.delete_ledger_entry(ledger_item.id)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Ledger entry '{ledger_item.name}' has been deleted."
+                )
+                if dialog:  # Only accept dialog if it exists
+                    dialog.accept()
+                # Refresh the account view
+                self.select_account(account)
+            except Exception as e:
+                QMessageBox.critical(
+                    self,
+                    "Error",
+                    f"Failed to delete ledger entry: {str(e)}"
+                )
+
     def create_account(self, name, account_type, balance):
         self.db.create_account(self.selected_profile.id, name, account_type, balance)
         self.setCurrentIndex(0)
+    
+    def add_ledger_entry(self, account):
+        """Show dialog to add a new ledger entry."""
+        from datetime import date
+        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDateEdit, QPushButton, QComboBox
+        
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Add Ledger Entry")
+        dialog.setMinimumWidth(450)
+        
+        layout = QVBoxLayout()
+        layout.setSpacing(12)
+        layout.setContentsMargins(16, 16, 16, 16)
+        
+        # Header
+        header_label = QLabel("➕ Add Ledger Entry")
+        header_font = QFont()
+        header_font.setPointSize(14)
+        header_font.setBold(True)
+        header_label.setFont(header_font)
+        header_label.setStyleSheet("margin-bottom: 8px;")
+        layout.addWidget(header_label)
+        
+        desc_label = QLabel(f"Add a ledger entry to {account.name}")
+        desc_label.setStyleSheet("color: #bdc3c7; font-size: 11px; margin-bottom: 8px;")
+        layout.addWidget(desc_label)
+        
+        # Name
+        name_label = QLabel("Name")
+        name_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        layout.addWidget(name_label)
+        
+        name_input = QLineEdit()
+        name_input.setPlaceholderText("Transaction name")
+        layout.addWidget(name_input)
+        
+        # Amount
+        amount_label = QLabel("Amount")
+        amount_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        layout.addWidget(amount_label)
+        
+        amount_input = QLineEdit('0.00')
+        layout.addWidget(amount_input)
+        
+        # Type
+        type_label = QLabel("Type")
+        type_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        layout.addWidget(type_label)
+        
+        type_combo = QComboBox()
+        type_combo.addItems(["Income", "Expense"])
+        layout.addWidget(type_combo)
+        
+        # Paid Date
+        paid_date_label = QLabel("Paid Date")
+        paid_date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        layout.addWidget(paid_date_label)
+        
+        paid_date_input = QDateEdit(date.today())
+        paid_date_input.setCalendarPopup(True)
+        layout.addWidget(paid_date_input)
+        
+        # Income Date
+        income_date_label = QLabel("Income Date")
+        income_date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        layout.addWidget(income_date_label)
+        
+        income_date_input = QDateEdit(date.today())
+        income_date_input.setCalendarPopup(True)
+        layout.addWidget(income_date_input)
+        
+        layout.addStretch(1)
+        
+        # Buttons
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch(1)
+        
+        cancel_button = QPushButton("❌ Cancel")
+        cancel_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7f8c8d;
+                color: white;
+                padding: 10px 24px;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #95a5a6;
+            }
+        """)
+        cancel_button.clicked.connect(dialog.reject)
+        buttons_layout.addWidget(cancel_button)
+        
+        save_button = QPushButton("✅ Save Entry")
+        save_button.setStyleSheet("""
+            QPushButton {
+                background-color: #3498db;
+                color: white;
+                padding: 10px 24px;
+                border: none;
+                border-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #5dade2;
+            }
+            QPushButton:pressed {
+                background-color: #2980b9;
+            }
+        """)
+        save_button.clicked.connect(
+            lambda: self._save_new_ledger_entry(
+                account,
+                name_input.text(),
+                float(amount_input.text() or 0),
+                type_combo.currentText(),
+                paid_date_input.date().toPyDate(),
+                income_date_input.date().toPyDate(),
+                dialog
+            )
+        )
+        buttons_layout.addWidget(save_button)
+        
+        layout.addLayout(buttons_layout)
+        dialog.setLayout(layout)
+        dialog.exec()
+    
+    def _save_new_ledger_entry(self, account, name, amount, entry_type, paid_date, income_date, dialog):
+        """Save a new ledger entry."""
+        try:
+            ledger_entry = self.db.create_ledger_entry(
+                name=name,
+                date=paid_date,
+                incomeDate=income_date,
+                type=entry_type,
+                amount=-amount if entry_type == "Expense" else amount,
+                accountId=account.id
+            )
+            
+            QMessageBox.information(
+                self,
+                "Success",
+                f"Ledger entry '{name}' created successfully!"
+            )
+            
+            dialog.accept()
+            # Refresh the account view
+            self.select_account(account)
+            
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to create ledger entry: {str(e)}")

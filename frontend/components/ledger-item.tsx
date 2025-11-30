@@ -27,21 +27,24 @@ export default function LedgerItem({ ledgerItemId = '' }) {
     if (params.ledgerItemId) {
         ledgerItemId = params.ledgerItemId;
     }
-    const ledgerItems = profile.accounts.reduce((acc, account) => {
-        return [...acc, ...account.ledger];
-    }, []);
+    const ledgerItems = profile?.accounts?.reduce((acc, account) => {
+        return [...acc, ...(account.ledger || [])];
+    }, []) || [];
     const [item, setItem] = React.useState<any>(
         ledgerItems.find(
             (ledgerItem) => ledgerItem.id === parseInt(ledgerItemId as string),
         ),
     );
-    const budgetItems = profile.budget;
+    const budgetItems = profile?.budget_items || [];
 
     const [ledgerName, setLedgerName] = React.useState(item?.name || '');
     const [ledgerAmount, setLedgerAmount] = React.useState(item?.amount || 0);
     const [ledgerType, setLedgerType] = React.useState(item?.type || 'expense');
     const [ledgerDate, setLedgerDate] = React.useState(
-        item?.date || new Date(),
+        item?.paid_date || new Date(),
+    );
+    const [ledgerIncomeDate, setLedgerIncomeDate] = React.useState(
+        item?.income_date || new Date(),
     );
     const [ledgerAccountId, setLedgerAccountId] = React.useState(
         item?.accountId || profile?.accounts[0]?.id,
@@ -80,26 +83,25 @@ export default function LedgerItem({ ledgerItemId = '' }) {
 
     async function addOrUpdate() {
         const ledgerItem = {
-            ...item,
-            name: ledgerName,
+            account_id: ledgerAccountId,
             amount: parseFloat(ledgerAmount),
-            type: ledgerType,
-            date: ledgerDate,
-            accountId: ledgerAccountId,
-            budgetItemId: ledgerBudgetItemId,
-            extrapolationItemId: ledgerExtrapolationItemId,
+            date: typeof ledgerDate === 'string' ? ledgerDate : ledgerDate.toISOString().split('T')[0],
+            income_date: typeof ledgerIncomeDate === 'string' ? ledgerIncomeDate : ledgerIncomeDate.toISOString().split('T')[0],
+            notes: ledgerName,
         };
         console.log('ledger item', ledgerItem);
 
         try {
-            if (ledgerItem.id) {
+            if (item?.id) {
                 await api.put(
-                    `/ledger/${profile.id}/${ledgerItem.id}`,
+                    `/ledger/${profile.id}/${item.id}`,
                     ledgerItem,
                 );
             } else {
                 await api.post(`/ledger/${profile.id}`, ledgerItem);
             }
+            // Redirect or refresh after success
+            window.location.hash = '#/accounts';
         } catch (error) {
             setLedgerError(error.message);
         }
@@ -128,7 +130,8 @@ export default function LedgerItem({ ledgerItemId = '' }) {
                                 label="Name"
                                 type="text"
                                 variant="standard"
-                                defaultValue={ledgerName ?? ''}
+                                value={ledgerName ?? ''}
+                                onChange={(e) => setLedgerName(e.target.value)}
                                 fullWidth
                             />
                         </Grid>
@@ -144,7 +147,8 @@ export default function LedgerItem({ ledgerItemId = '' }) {
                                 label="Amount"
                                 type="number"
                                 variant="standard"
-                                defaultValue={ledgerAmount}
+                                value={ledgerAmount}
+                                onChange={(e) => setLedgerAmount(parseFloat(e.target.value))}
                                 fullWidth
                             />
                         </Grid>
@@ -171,7 +175,7 @@ export default function LedgerItem({ ledgerItemId = '' }) {
                                 }}
                                 fullWidth
                             >
-                                {profile.accounts.map((account) => {
+                                {profile?.accounts?.map((account) => {
                                     return (
                                         <MenuItem
                                             key={account.id}
@@ -183,7 +187,7 @@ export default function LedgerItem({ ledgerItemId = '' }) {
                                             {account.name}
                                         </MenuItem>
                                     );
-                                })}
+                                }) || []}
                             </Select>
                         </Grid>
                         <Grid size={12}>
@@ -220,15 +224,30 @@ export default function LedgerItem({ ledgerItemId = '' }) {
                         </Grid>
                         <Grid size={12}>
                             <DesktopDatePicker
-                                label="Date"
-                                // inputFormat="MM/dd/yyyy"
+                                label="Paid Date"
                                 value={ledgerDate ?? new Date()}
                                 onChange={(value) =>
                                     setLedgerDate(value as Date)
                                 }
-                                // renderInput={(params) => (
-                                //     <TextField {...params} />
-                                // )}
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                    }
+                                }}
+                            />
+                        </Grid>
+                        <Grid size={12}>
+                            <DesktopDatePicker
+                                label="Income Date"
+                                value={ledgerIncomeDate ?? new Date()}
+                                onChange={(value) =>
+                                    setLedgerIncomeDate(value as Date)
+                                }
+                                slotProps={{
+                                    textField: {
+                                        fullWidth: true,
+                                    }
+                                }}
                             />
                         </Grid>
                         <Grid size={12}>

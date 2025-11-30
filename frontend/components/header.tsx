@@ -10,7 +10,8 @@ const navLinks = [
     { title: 'Calendar', path: '/' },
     { title: 'Accounts', path: '/accounts' },
     { title: 'Budget', path: '/budget' },
-    { title: 'Settings', path: '/profile' },
+    { title: 'Profile', path: '/profile' },
+    { title: 'Settings', path: '/settings' },
 ];
 
 export default function Header(props) {

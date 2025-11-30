@@ -8,6 +8,7 @@ import Calendar from './components/calendar';
 
 import { api } from './components/renderUtils';
 import Profile from './components/profile';
+import Settings from './components/settings';
 import Account from './components/account';
 import BudgetItem from './components/budget-item';
 import LedgerItem from './components/ledger-item';
@@ -33,7 +34,7 @@ export default function App(props) {
     const logout = () => {
         localStorage.removeItem('budgie:profileId');
         setProfileId(0);
-        window.location.reload(); // TODO
+        // Profile state will automatically update via useStore when setProfileId is called
     }
 
     return (<div id="app">
@@ -48,6 +49,7 @@ export default function App(props) {
                 <Route path="/budget/:budgetItemId" element={<BudgetItem />} />
                 <Route path="/ledger/:ledgerItemId" element={<LedgerItem />} />
                 <Route path="/profile" element={<Profile theme={theme} swapTheme={swapTheme} />} />
+                <Route path="/settings" element={<Settings theme={theme} swapTheme={swapTheme} />} />
             </Routes>
         </HashRouter>) : (<Profiles />) }
     </div>);

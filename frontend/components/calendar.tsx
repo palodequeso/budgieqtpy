@@ -154,7 +154,7 @@ export default function Calendar() {
     const [editingCell, setEditingCell] = React.useState<CalendarEntry | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState(null);
-    const theme = localStorage.getItem('budgie:theme') || 'light';
+    const [theme, setTheme] = React.useState(localStorage.getItem('budgie:theme') || 'dark');
     const profile = useStore((state) => (state as any).profile);
 
     const extrapolate = async () => {
@@ -229,6 +229,25 @@ export default function Calendar() {
         load();
     }, [profile]);
 
+    // Filter visible income dates based on profile.hidden_through
+    const getVisibleIncomeDates = () => {
+        if (!schedule?.sorted_income_dates) return [];
+        
+        // If no hidden_through, show all dates
+        if (!profile?.hidden_through) {
+            return schedule.sorted_income_dates;
+        }
+        
+        // Filter out dates <= hidden_through
+        const hiddenDate = new Date(profile.hidden_through);
+        return schedule.sorted_income_dates.filter(dateStr => {
+            const date = new Date(dateStr);
+            return date > hiddenDate;
+        });
+    };
+
+    const visibleIncomeDates = getVisibleIncomeDates();
+
     return (
         <Paper className="section" id="calendar" elevation={2}>
             {profile && profile?.budget?.length === 0 ? (
@@ -242,6 +261,7 @@ export default function Calendar() {
                         editingCell={editingCell}
                         setEditingCell={setEditingCell}
                         load={load}
+                        schedule={schedule}
                     />
                     <div>
                         {isLoading ? (
@@ -256,7 +276,7 @@ export default function Calendar() {
                                         <TableHead>
                                             <TableRow hover>
                                                 <TableCell></TableCell>
-                                                {schedule.sorted_income_dates.map((date) => {
+                                                {visibleIncomeDates.map((date) => {
                                                         return (
                                                             <TableCell
                                                                 style={{
@@ -273,9 +293,9 @@ export default function Calendar() {
                                         </TableHead>
                                         {schedule ? (
                                             <CalendarExtrapolation
-                                                schedule={schedule}
+                                                schedule={{...schedule, sorted_income_dates: visibleIncomeDates}}
                                                 setEditingCell={setEditingCell}
-                                                theme={'dark' /* terrible hack for now, still fixiung settings page */}
+                                                theme={theme}
                                                 miscEntries={miscEntries}
                                                 miscRowCount={miscRowCount}
                                             />
@@ -291,21 +311,29 @@ export default function Calendar() {
                             sortedIncomeDates={schedule?.sorted_income_dates ?? []}
                             profile={profile}
                         /> */}
-                        {/* <SnackbarUnstyled */}
-                        <div
-                            // open={fetchError !== null}
-                            // autoHideDuration={5000}
-                            // onClose={() => setFetchError(null)}
-                        >
-                            {fetchError}
-                        {/* </SnackbarUnstyled> */}
-                        </div>
+                        {fetchError && (
+                            <div style={{ color: 'red', padding: '16px', textAlign: 'center' }}>
+                                {fetchError}
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
-            {/* <a href={`/api/calendar/${profile.id}/downloadspreadsheet`}>Download</a> */}
-            {/* <div>Ledger Recent</div> */}
-            {/* <div>Upcoming Entries</div> */}
+            {profile && (
+                <div style={{ padding: '16px', textAlign: 'center' }}>
+                    <a 
+                        href={`/api/calendar/${profile.id}/downloadspreadsheet`}
+                        style={{ 
+                            color: '#1976d2', 
+                            textDecoration: 'none',
+                            fontSize: '14px',
+                            fontWeight: '500'
+                        }}
+                    >
+                        📥 Download Schedule Spreadsheet
+                    </a>
+                </div>
+            )}
         </Paper>
     );
 }

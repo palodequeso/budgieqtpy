@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTabWidget
+from PyQt6.QtWidgets import QMainWindow, QWidget, QVBoxLayout, QTabWidget, QApplication
 
 from api.profile import ProfileAPI
 from database.database import Database
@@ -8,6 +8,7 @@ from ui.budget import Budget
 from ui.calendar import Calendar
 from ui.profiles import Profiles
 from ui.settings import Settings
+from ui.theme import get_theme, set_current_theme
 
 
 class MainWindow(QMainWindow):
@@ -43,7 +44,7 @@ class MainWindow(QMainWindow):
         exitAction.triggered.connect(self.close)
 
     def open_settings(self):
-        settings = Settings()
+        settings = Settings(self.db, self.selected_profile)
 
     def render_profiles(self):
         profile_chooser = Profiles(self.db, self.profiles)
@@ -52,7 +53,18 @@ class MainWindow(QMainWindow):
 
     def profile_selected(self, profile):
         self.selected_profile = profile
+        # Save this as the last selected profile
+        self.db.set_last_profile_id(profile.id)
+        self.apply_theme()
         self.render_profile()
+    
+    def apply_theme(self):
+        """Apply theme based on selected profile."""
+        if self.selected_profile:
+            theme_name = self.selected_profile.theme if self.selected_profile.theme else "dark"
+            set_current_theme(theme_name)
+            theme = get_theme(theme_name)
+            QApplication.instance().setStyleSheet(theme.get_stylesheet())
 
     def render_calendar(self, tabWidget):
         calendar_widget = Calendar(self.db, self.selected_profile)
