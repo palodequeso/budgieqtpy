@@ -106,10 +106,19 @@ class Schedule:
                 from database.budget_item import BudgetItem
                 # Determine type based on amount sign
                 item_type = "Expense" if item.amount < 0 else "Income"
-                # Create unique name based on date and amount to group same-day one-offs
-                synthetic_name = f"One-off ({item.due_date.strftime('%Y-%m-%d')})"
-                # Use a synthetic ID based on date to group one-offs on same day
-                synthetic_id = f"oneoff-{item.due_date.strftime('%Y-%m-%d')}"
+                
+                # Group by category instead of date for cleaner display
+                category = getattr(item, 'category', None)
+                if category == 'savings':
+                    synthetic_name = "Savings"
+                    synthetic_id = "synthetic-savings"
+                elif category == 'one_off':
+                    synthetic_name = "One-off"
+                    synthetic_id = "synthetic-one-off"
+                else:
+                    # Fallback for legacy items without category
+                    synthetic_name = "One-off"
+                    synthetic_id = "synthetic-one-off"
                 
                 budget_item = BudgetItem(
                     name=synthetic_name,

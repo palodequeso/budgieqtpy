@@ -127,10 +127,10 @@ class Database:
         return budget_item
 
     def create_extrapolation_item(
-        self, profileId, date, amount, income_date, budget_item_id
+        self, profileId, date, amount, income_date, budget_item_id, category=None
     ):
         extrapolation_item = ExtrapolationItem(
-            date, amount, income_date, budget_item_id
+            date, amount, income_date, budget_item_id, category=category
         )
         extrapolation_item.create(self.db, profileId)
         return extrapolation_item

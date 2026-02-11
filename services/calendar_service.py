@@ -144,7 +144,8 @@ class CalendarService:
                 date=date.today().isoformat(),
                 amount=amount,
                 income_date=income_date,
-                budget_item_id=None
+                budget_item_id=None,
+                category='one_off'
             )
             
             return {"type": "extrapolation", "item": extrap_item}
@@ -191,7 +192,8 @@ class CalendarService:
                 date=entry['date'],
                 amount=-entry['amount'],  # Negative for transfer out
                 income_date=entry['date'],
-                budget_item_id=None
+                budget_item_id=None,
+                category='savings'
             )
             count += 1
         
