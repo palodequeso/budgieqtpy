@@ -59,16 +59,17 @@ class Schedule:
         # fetch some data
         self.budget_item_list = database.fetch_budget_items(profile_id)
         self.accounts = database.fetch_accounts(profile_id)
+        # Fetch and sort extrapolation items, handling None income_date values
         self.extrapolation_items: list[ExtrapolationItem] = sorted(
             database.fetch_extrapolation_items(profile_id),
-            key=operator.attrgetter("income_date"),
+            key=lambda x: x.income_date if x.income_date is not None else date.min,
             reverse=True,
         )
 
         # Create a dictionary of budget items
         for budget_item in self.budget_item_list:
             self.budget_items[budget_item.id] = budget_item
-            if budget_item.type == "Income":
+            if budget_item.type.lower() == "income":
                 self.income_budget_items.append(budget_item)
             else:
                 self.expense_budget_items.append(budget_item)
@@ -84,20 +85,78 @@ class Schedule:
                 self.ledger_entries_by_id[ledger_entry.id] = ledger_entry
 
     def build_schedule(self):
+        # Track synthetic budget items we create for one-off items
+        synthetic_budget_items = {}
+        
         # Create the schedule
         for item in self.extrapolation_items:
+            # Collect items with no income_date into unscheduled_entries
+            if item.income_date is None:
+                budget_item = self.budget_items.get(item.budget_item_id, None)
+                entry = ScheduleEntry(
+                    budget_item.type if budget_item else "Expense",
+                    None,
+                    budget_item,
+                    []
+                )
+                entry.amount = item.amount
+                entry.due_date = item.due_date
+                entry.budget_item_id = item.budget_item_id
+                entry_item = ScheduleEntryItem(item)
+                entry.add_item(entry_item)
+                self.unscheduled_entries.append(entry)
+                continue
+                
             date_key = item.income_date.strftime("%Y-%m-%d")
             if self.columns.get(date_key, None) is None:
                 self.columns[date_key] = ScheduleColumn(item.income_date, 0)
 
-            # find associated budget item
+            # find associated budget item or create synthetic one for one-off items
             budget_item = self.budget_items.get(item.budget_item_id, None)
             if budget_item is None:
-                print(f"budget item {item.budget_item_id} not found")
-                continue
+                # This is a one-off item (savings transfer, one-off expense, etc.)
+                # Create a synthetic budget item for display purposes
+                from database.budget_item import BudgetItem
+                # Determine type based on amount sign
+                item_type = "Expense" if item.amount < 0 else "Income"
+                
+                # Group by category instead of date for cleaner display
+                category = getattr(item, 'category', None)
+                if category == 'savings':
+                    synthetic_name = "Savings"
+                    synthetic_id = "synthetic-savings"
+                elif category == 'one_off':
+                    synthetic_name = "One-off"
+                    synthetic_id = "synthetic-one-off"
+                elif category == 'debt_payment':
+                    synthetic_name = "Debt Payment"
+                    synthetic_id = "synthetic-debt-payment"
+                else:
+                    # Fallback for legacy items without category
+                    synthetic_name = "One-off"
+                    synthetic_id = "synthetic-one-off"
+                
+                budget_item = BudgetItem(
+                    name=synthetic_name,
+                    type=item_type,
+                    amount=abs(item.amount),
+                    start_date=item.due_date,
+                    end_date=item.due_date,
+                    budget_group_id=None,
+                    periods=[],
+                    id=synthetic_id,
+                    created_at=None,
+                    updated_at=None
+                )
+                
+                # Track this synthetic budget item
+                if synthetic_id not in synthetic_budget_items:
+                    synthetic_budget_items[synthetic_id] = budget_item
+                    self.budget_items[synthetic_id] = budget_item
 
             schedule_entry: ScheduleEntry = None
-            if budget_item.type == "Income":
+            is_income = budget_item.type.lower() == "income"
+            if is_income:
                 schedule_entry = next((e for e in self.columns[date_key].incomes if e.budget_item.id == budget_item.id), None)
             else:
                 schedule_entry = next((e for e in self.columns[date_key].expenses if e.budget_item.id == budget_item.id), None)
@@ -105,15 +164,22 @@ class Schedule:
                 schedule_entry = ScheduleEntry(
                     budget_item.type, item.income_date, budget_item, []
                 )
-                if budget_item.type == "Expense":
-                    self.columns[date_key].add_expense(schedule_entry)
+                if is_income:
+                    self.columns[date_key].add_income(schedule_entry)
                 else:
-                    self.columns[date_key].add_income(schedule_entry)  # TODO: Handle multiple incomes
+                    self.columns[date_key].add_expense(schedule_entry)
 
             entry_item = ScheduleEntryItem(item)
             if item.ledger_entry_id is not None:
                 entry_item.ledger_entry = self.ledger_entries_by_id.get(item.ledger_entry_id, None)
             schedule_entry.add_item(entry_item)
+
+        # Add synthetic budget items to the appropriate lists for display
+        for synthetic_item in synthetic_budget_items.values():
+            if synthetic_item.type == "Expense":
+                self.expense_budget_items.append(synthetic_item)
+            else:
+                self.income_budget_items.append(synthetic_item)
 
         column_keys = list(self.columns.keys())
         column_keys = [date.fromisoformat(x) for x in column_keys]
@@ -124,7 +190,6 @@ class Schedule:
         for income_date in self.sorted_income_dates:
             column = self.columns.get(income_date.strftime("%Y-%m-%d"), None)
             if column is None:
-                print(f"column {income_date.strftime('%Y-%m-%d')} not found")
                 continue
 
             starting_balance = 0
@@ -139,19 +204,19 @@ class Schedule:
                     previous_income_date.strftime("%Y-%m-%d"), None
                 )
                 if previous_column is None:
-                    print(f"previous column {previous_income_date.strftime('%Y-%m-%d')} not found")
                     continue
                 starting_balance = previous_column.total()
-            # TODO: This is kinda hard, need to consider previous column total, and their ledger_item/extrapolation_item balance
+            # Starting balance: first column sums ledger entries before income date,
+            # subsequent columns use the previous column's total (income + expenses + carry)
             column.starting_balance = starting_balance
             previous_income_date = income_date
 
     def get_total_as_of(self, in_date: date, inclusive=True):
         # find closest income date
         closest_income_date = next(
-            d
-            for d in self.sorted_income_dates
-            if (d <= in_date if inclusive else d < in_date)
+            (d for d in self.sorted_income_dates
+             if (d <= in_date if inclusive else d < in_date)),
+            None
         )
 
         # if no income date, return starting balance

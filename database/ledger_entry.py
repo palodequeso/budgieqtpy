@@ -84,8 +84,7 @@ class LedgerEntry:
             )
         return output
 
-    staticmethod
-
+    @staticmethod
     def create_table(db):
         cursor = db.cursor()
         cursor.execute(

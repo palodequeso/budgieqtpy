@@ -1,0 +1,4 @@
+# Minimal requirements for Qt desktop app only
+# (excluding backend/API server dependencies)
+PyQt6==6.7.1
+odswriter==0.4.0

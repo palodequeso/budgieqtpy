@@ -1,0 +1,154 @@
+html, body {
+  font-family: sans-serif;
+  background-color: #2f3a49;
+}
+
+.section {
+  margin-top: 16px;
+  padding: 16px;
+}
+
+#calendar-container {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.calendar-column {
+  display: inline-flex;
+  position: relative;
+  margin: 8px;
+  padding: 12px 20px;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  height: 100%;
+  width: 200px !important;
+}
+
+.calendar-column:last-child {
+  margin-right: 20px;
+}
+
+.calendar-column-date {
+  position: absolute;
+  top: 4px;
+}
+
+.calendar-column-subtotal {
+  position: absolute;
+  bottom: 4px;
+}
+
+.calendar-column-entry {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  flex-direction: row;
+  align-items: center;
+}
+
+.calendar-column-entry label {
+  font-size: 14px;
+}
+
+.calendar-column-entry span {
+  margin-left: 8px;
+}
+
+.currency {
+  cursor: pointer;
+  font-family: monospace !important;
+  font-size: 12px !important;
+  text-align: right !important;
+}
+
+.currency-amount {
+  pointer-events: none;
+  cursor: pointer;
+  font-family: monospace !important;
+  font-size: 12px !important;
+  text-align: right !important;
+}
+
+.currency-paid {
+  font-weight: bold;
+  font-style: italic;
+  text-decoration: line-through;
+}
+
+#profiles-form {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  margin: 20%;
+}
+
+.login-form-field {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  margin: 8px;
+}
+
+
+#title-div {
+  color: white;
+  h4 {
+    margin-left: 24px;
+  }
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+
+  label {
+    margin-left: 8px;
+    margin-right: 8px;
+  }
+}
+
+.calendar-header-button {
+  margin-top: -56px !important;
+  float: right;
+}
+
+.MuiDialogContent-root {
+  .MuiPaper-root {
+    padding: 12px;
+  }
+}
+
+.mark-paid-container {
+  padding: 8px;
+}
+
+.item-breakdown-item {
+  margin: 2px;
+  border-radius: 4px;
+}
+
+.mark-paid-container {
+  margin-top: 8px;
+  margin-bottom: 8px;
+}
+
+.selected-breakdown-item-form {
+  display: flex;
+  flex-direction: row;
+}

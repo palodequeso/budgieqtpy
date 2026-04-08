@@ -1,0 +1,67 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Database (will be mounted as volume)
+*.db
+*.sqlite
+*.sqlite3
+
+# Mobile app (not needed for web Docker image)
+mobile/
+android/
+
+# Qt desktop app (not needed for web Docker image)
+ui/
+deployment/
+*.AppImage
+*.apk
+*.spec
+org.palodequeso.budgie.*
+
+# Screenshots and docs
+screenshots/
+*.png
+*.md
+
+# Test files
+tests/
+frontend/tests/
+coverage/
+.coverage
+htmlcov/
+
+# Build artifacts
+frontend/dist/
+schedule-spreadsheets/
+
+# Temp files
+*.log
+.DS_Store
+*.tmp

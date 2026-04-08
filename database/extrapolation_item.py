@@ -11,6 +11,8 @@ class ExtrapolationItem:
     overridden_at: date = None
     budget_item_id: int = None
     ledger_entry_id: int = None
+    category: str = None  # 'savings', 'one_off', 'debt_payment', or None for budget items
+    name: str = None  # Optional display name (e.g., debt name for debt payments)
 
     def __init__(
         self,
@@ -23,6 +25,8 @@ class ExtrapolationItem:
         id=None,
         created_at=None,
         updated_at=None,
+        category=None,
+        name=None,
     ):
         self.id = id
         self.due_date = due_date
@@ -33,6 +37,8 @@ class ExtrapolationItem:
         self.overridden_at = overridden_at
         self.budget_item_id = budget_item_id
         self.ledger_entry_id = ledger_entry_id
+        self.category = category
+        self.name = name
 
     def create(self, db, profile_id):
         cursor = db.cursor()
@@ -40,8 +46,8 @@ class ExtrapolationItem:
         cursor.execute(
             """
             INSERT INTO extrapolation_item
-            (due_date, amount, income_date, created_at, updated_at, budget_item_id, profile_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (due_date, amount, income_date, created_at, updated_at, budget_item_id, profile_id, category, name)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 self.due_date,
@@ -51,6 +57,8 @@ class ExtrapolationItem:
                 datetime_now,
                 self.budget_item_id,
                 profile_id,
+                self.category,
+                self.name,
             ),
         )
         db.commit()
@@ -79,23 +87,33 @@ class ExtrapolationItem:
     def fetch_all(db, profile_id):
         cursor = db.cursor()
         cursor.execute(
-            "SELECT due_date, amount, income_date, budget_item_id, overridden_at, ledger_entry_id, id, created_at, updated_at FROM extrapolation_item WHERE profile_id = ?",
+            "SELECT due_date, amount, income_date, budget_item_id, overridden_at, ledger_entry_id, id, created_at, updated_at, category, name FROM extrapolation_item WHERE profile_id = ?",
             (profile_id,),
         )
         rows = cursor.fetchall()
         output = []
         for row in rows:
+            # Handle None values for dates
+            due_date = date.fromisoformat(row[0]) if row[0] and isinstance(row[0], str) else row[0]
+            income_date = date.fromisoformat(row[2]) if row[2] and isinstance(row[2], str) else row[2]
+            created_at = datetime.fromisoformat(row[7]) if row[7] and isinstance(row[7], str) else row[7]
+            updated_at = datetime.fromisoformat(row[8]) if row[8] and isinstance(row[8], str) else row[8]
+            category = row[9] if len(row) > 9 else None
+            name = row[10] if len(row) > 10 else None
+
             output.append(
                 ExtrapolationItem(
-                    date.fromisoformat(row[0]),
+                    due_date,
                     row[1],
-                    date.fromisoformat(row[2]),
+                    income_date,
                     row[3],
                     row[4],
                     row[5],
                     row[6],
-                    datetime.fromisoformat(row[7]),
-                    datetime.fromisoformat(row[8]),
+                    created_at,
+                    updated_at,
+                    category,
+                    name,
                 )
             )
         return output
@@ -116,6 +134,7 @@ class ExtrapolationItem:
                 "budget_item_id" integer,
                 "ledger_entry_id" integer,
                 "profile_id" integer,
+                "category" varchar,
                 CONSTRAINT "REL_6e4d51fad1f2bdc128e4031154" UNIQUE ("ledger_entry_id"),
                 CONSTRAINT "FK_d5addf4fde8c9b808450b32cc51" FOREIGN KEY ("budget_item_id")
                 REFERENCES "budget_item" ("id") ON DELETE NO ACTION ON UPDATE NO ACTION,
@@ -126,3 +145,17 @@ class ExtrapolationItem:
         """
         )
         db.commit()
+        
+        # Add category column to existing tables (migration)
+        try:
+            cursor.execute("ALTER TABLE extrapolation_item ADD COLUMN category varchar")
+            db.commit()
+        except:
+            pass  # Column already exists
+
+        # Add name column to existing tables (migration)
+        try:
+            cursor.execute("ALTER TABLE extrapolation_item ADD COLUMN name varchar")
+            db.commit()
+        except:
+            pass  # Column already exists

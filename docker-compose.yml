@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  budgie:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: budgie-app
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mount database file to persist data
+      - ./budgie.db:/app/budgie.db:rw
+      # Optional: Mount schedule-spreadsheets for downloads
+      - ./schedule-spreadsheets:/app/schedule-spreadsheets:rw
+    environment:
+      # Database configuration
+      - DATABASE_PATH=/app/budgie.db
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped

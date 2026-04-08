@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+      "jsx": "react",
+      "outDir": "dist",
+      "sourceMap": true,
+      "baseUrl": ".",
+      "paths": {
+          "*": [
+              "node_modules/*",
+              "src/types/*"
+          ]
+      },
+      "target": "es2017",
+      "module": "commonjs",
+      "lib": ["es2017", "dom", "dom.iterable"],
+      "declaration": true,
+      "declarationMap": true,
+      "noFallthroughCasesInSwitch": true,
+      "moduleResolution": "node",
+      "experimentalDecorators": true,
+      "allowJs": true,
+      "allowSyntheticDefaultImports": true,
+      "forceConsistentCasingInFileNames": true
+  },
+  "include": [
+      "**/*"
+  ],
+  "exclude": [
+      "node_modules",
+      "dist"
+  ]
+}

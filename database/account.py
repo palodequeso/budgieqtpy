@@ -46,8 +46,7 @@ class Account:
         )
         ledger.create(db)
 
-    staticmethod
-
+    @staticmethod
     def fetch_all(db, profile_id):
         cursor = db.cursor()
         cursor.execute(
@@ -68,8 +67,7 @@ class Account:
             )
         return output
 
-    staticmethod
-
+    @staticmethod
     def create_table(db):
         cursor = db.cursor()
         cursor.execute(

@@ -12,6 +12,7 @@ class BudgetItem:
     start_date: date = None
     end_date: date = None
     budget_group_id: int = None
+    debt_id: int = None
     periods: list[BudgetItemPeriod] = None
 
     def __init__(
@@ -26,6 +27,7 @@ class BudgetItem:
         id=None,
         created_at=None,
         updated_at=None,
+        debt_id=None,
     ):
         self.id = id
         self.name = name
@@ -36,6 +38,7 @@ class BudgetItem:
         self.start_date = start_date
         self.end_date = end_date
         self.budget_group_id = budget_group_id
+        self.debt_id = debt_id
         self.periods = periods
 
     def create(self, db, profile_id):
@@ -44,8 +47,8 @@ class BudgetItem:
         cursor.execute(
             """
             INSERT INTO budget_item
-            (name, type, amount, budget_group_id, start_date, end_date, profile_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (name, type, amount, budget_group_id, start_date, end_date, profile_id, created_at, updated_at, debt_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 self.name,
@@ -57,6 +60,7 @@ class BudgetItem:
                 profile_id,
                 datetime_now,
                 datetime_now,
+                self.debt_id,
             ),
         )
         db.commit()
@@ -71,18 +75,18 @@ class BudgetItem:
             created_periods.append(p)
         self.periods = created_periods
 
-    staticmethod
-
+    @staticmethod
     def fetch_all(db, profile_id):
         cursor = db.cursor()
         cursor.execute(
-            "SELECT name, type, amount, start_date, end_date, budget_group_id, id, created_at, updated_at FROM budget_item WHERE profile_id = ?",
+            "SELECT name, type, amount, start_date, end_date, budget_group_id, id, created_at, updated_at, debt_id FROM budget_item WHERE profile_id = ?",
             (profile_id,),
         )
         rows = cursor.fetchall()
         output = []
         for row in rows:
             periods = BudgetItemPeriod.fetch_by_budget_item(db, row[6])
+            debt_id = row[9] if len(row) > 9 else None
             output.append(
                 BudgetItem(
                     row[0],
@@ -95,12 +99,12 @@ class BudgetItem:
                     row[6],
                     datetime.fromisoformat(row[7]),
                     datetime.fromisoformat(row[8]),
+                    debt_id=debt_id,
                 )
             )
         return output
 
-    staticmethod
-
+    @staticmethod
     def create_table(db):
         cursor = db.cursor()
         cursor.execute(
@@ -123,3 +127,10 @@ class BudgetItem:
         """
         )
         db.commit()
+
+        # Add debt_id column to existing tables (migration)
+        try:
+            cursor.execute("ALTER TABLE budget_item ADD COLUMN debt_id integer")
+            db.commit()
+        except:
+            pass  # Column already exists
