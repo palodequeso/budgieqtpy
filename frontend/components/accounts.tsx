@@ -10,6 +10,7 @@ import * as React from 'react';
 import { useTheme } from '@mui/material/styles';
 import { Link } from 'react-router-dom';
 import CurrencyLabel from './currency-label';
+import HelpIcon from './help-icon';
 import { useStore } from '../store';
 
 const accountIcons = {
@@ -48,6 +49,7 @@ export default function Accounts() {
             }}>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', m: 0 }}>
                     💼 Accounts
+                    <HelpIcon text="Add your bank accounts here. Each account tracks its own ledger of transactions." />
                 </Typography>
                 <Link to="/accounts/new" style={{ textDecoration: 'none' }}>
                     <Button
@@ -167,7 +169,7 @@ export default function Accounts() {
                             py: 5 
                         }}
                     >
-                        No accounts yet. Click 'Add Account' to create one.
+                        Accounts represent your bank accounts — checking, savings, credit cards. Each account has a ledger that tracks transactions. Click 'Add Account' above to create your first one.
                     </Typography>
                 )}
             </Box>

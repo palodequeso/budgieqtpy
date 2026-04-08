@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Budgie",
+    "slug": "budgie",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "platforms": ["android"],
+    "android": {
+      "package": "org.palodequeso.budgie"
+    }
+  }
+}

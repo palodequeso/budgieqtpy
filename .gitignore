@@ -164,11 +164,10 @@ cython_debug/
 # local dev db
 budgie.db
 
-.flatpak-builder
-flatpak-build-dir
-
 schedule-spreadsheets
 
-repo
-
+# Build outputs
+build/
+*.AppImage
+budgie.apk
 budgie-app.tar*

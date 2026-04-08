@@ -29,5 +29,4 @@ class ProfileService:
     
     def delete_profile(self, profile_id: int) -> None:
         """Delete a profile."""
-        # TODO: Implement delete_profile in database
-        raise NotImplementedError("Profile deletion not yet implemented")
+        self.db.delete_profile(profile_id)

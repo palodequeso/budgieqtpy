@@ -119,10 +119,14 @@ class LedgerService:
         if extrap_item.ledger_entry_id is not None:
             raise ValueError(f"Extrapolation item {extrapolation_item_id} is already marked as paid (ledger entry {extrap_item.ledger_entry_id})")
         
+        # Savings transfers are stored as negative (outflow from spending pool) but
+        # when deposited into the savings account the ledger entry should be positive.
+        amount = abs(extrap_item.amount) if getattr(extrap_item, 'category', None) == 'savings' else extrap_item.amount
+
         # Create ledger entry
         ledger_entry = self.create_ledger_entry(
             account_id=account_id,
-            amount=extrap_item.amount,
+            amount=amount,
             paid_date=paid_date or date.today().isoformat(),
             income_date=extrap_item.income_date.isoformat() if hasattr(extrap_item.income_date, 'isoformat') else str(extrap_item.income_date),
             name=f"Paid item {extrapolation_item_id}",

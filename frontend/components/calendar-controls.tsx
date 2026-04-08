@@ -17,7 +17,9 @@ import CalendarSavingsItems from './calendar-savings-items';
 import CalendarGotPaid from './calendar-got-paid';
 import { useStore } from '../store';
 import { api } from './renderUtils';
+import HelpIcon from './help-icon';
 import CalendarExtrapolationConfirmation from './calendar-extrapolation-confirmation';
+import CalendarAIAnalysis from './calendar-ai-analysis';
 
 export default function CalendarControls({
     unscheduledItems,
@@ -27,6 +29,8 @@ export default function CalendarControls({
     setEditingCell,
     load,
     schedule,
+    showAllColumns,
+    setShowAllColumns,
 }) {
     const [unscheduledOpen, setUnscheduledOpen] = React.useState(false);
     const [addingOneOffExpense, setAddingOneOffExpense] = React.useState(false);
@@ -38,10 +42,9 @@ export default function CalendarControls({
     );
     const [extrapolationModalOpen, setExtrapolationModalOpen] = React.useState(false);
     const [actionsMenuAnchor, setActionsMenuAnchor] = React.useState<null | HTMLElement>(null);
+    const [aiAnalysisOpen, setAiAnalysisOpen] = React.useState(false);
     const profile = useStore((state) => (state as any).profile);
     const theme = useTheme();
-
-    console.log(profile);
 
     const download = async () => {
         try {
@@ -183,6 +186,7 @@ export default function CalendarControls({
                     >
                         🔄 Extrapolate
                     </Button>
+                    <HelpIcon text="Projects your budget items onto the calendar. Run this after adding or changing budget items." />
                     
                     <Button
                         id="i-got-paid-button"
@@ -257,7 +261,21 @@ export default function CalendarControls({
                     >
                         👁️ Hide Column
                     </Button>
-                    
+
+                    {profile?.hidden_through && (
+                        <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => setShowAllColumns(!showAllColumns)}
+                            sx={{
+                                color: theme.palette.mode === 'dark' ? '#b0bec5' : '#546e7a',
+                                borderColor: theme.palette.mode === 'dark' ? '#546e7a' : '#bdbdbd'
+                            }}
+                        >
+                            {showAllColumns ? '👁️ Hide Past' : '👁️ Show Hidden'}
+                        </Button>
+                    )}
+
                     <Button
                         size="small"
                         variant="outlined"
@@ -269,6 +287,18 @@ export default function CalendarControls({
                     >
                         📊 Export
                     </Button>
+
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setAiAnalysisOpen(true)}
+                        sx={{
+                            color: theme.palette.mode === 'dark' ? '#b0bec5' : '#546e7a',
+                            borderColor: theme.palette.mode === 'dark' ? '#546e7a' : '#bdbdbd'
+                        }}
+                    >
+                        🤖 AI Analysis
+                    </Button>
                 </div>
             </div>
         <div>
@@ -279,7 +309,7 @@ export default function CalendarControls({
             />
             <CalendarUnscheduled
                 profile={profile}
-                sortedIncomeDates={Object.keys(extrapolation).sort()}
+                sortedIncomeDates={schedule?.sorted_income_dates || Object.keys(extrapolation).sort()}
                 open={unscheduledOpen}
                 close={(saved) => {
                     setUnscheduledOpen(false);
@@ -330,6 +360,12 @@ export default function CalendarControls({
                 }}
                 entry={editingCell ?? null as any}
                 profile={profile}
+                schedule={schedule}
+            />
+            <CalendarAIAnalysis
+                open={aiAnalysisOpen}
+                close={() => setAiAnalysisOpen(false)}
+                profileId={profile?.id}
             />
         </div>
     </div>);

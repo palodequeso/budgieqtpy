@@ -23,6 +23,15 @@ class API {
             headers: this._headers,
             body: JSON.stringify(body),
         });
+        if (!result.ok) {
+            let errorMessage = `Request failed (${result.status})`;
+            try {
+                const errorBody = await result.json();
+                if (errorBody.error) errorMessage = errorBody.error;
+                else if (errorBody.message) errorMessage = errorBody.message;
+            } catch {}
+            throw new Error(errorMessage);
+        }
         return result.json();
     }
 

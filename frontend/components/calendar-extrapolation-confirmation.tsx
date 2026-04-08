@@ -1,9 +1,11 @@
 import {
+    Box,
     Button,
     Dialog,
     DialogActions,
     DialogContent,
-    DialogTitle
+    DialogTitle,
+    Typography
 } from '@mui/material';
 import * as React from 'react';
 
@@ -14,23 +16,45 @@ export default function CalendarExtrapolationConfirmation({
 }) {
     return (
         <Dialog open={open} onClose={close} maxWidth="md" fullWidth>
-            <DialogTitle>Budget Extrapolation Confirmation</DialogTitle>
+            <DialogTitle>Run Budget Extrapolation?</DialogTitle>
             <DialogContent>
-                Budget extrapolation is meant to be used when you are initially done setting up budget items. It will
-                take this data and attempt to schedule a budget for the start and end time periods you set in the controls.
-                <br/>
-                Basically it first fills out all incomes as columns in a schedule spreadsheet. Then it fills out all
-                expenses finding the first available column that has enough money to cover the expense. If there is not
-                enough money in the schedule, it will mark it as unscheduled and you can manually slot those entries in.
-                <br/>
-                After this, you should have a servicable budget that you can start marking entries off as you pay.
-                <br/>
-                It is also reccomended that once your base schedule is set, you try to fit in some savings items to build up
-                some emergency fund as well, but this app is just a helper. It is up to you to make the right choices for you.
-                <br/>
-                Thinking about money is pain for many of us, and this tool attempts to make it a little easier.
-                <br/>
-                Good luck out there!
+                <Typography variant="body1" gutterBottom>
+                    Extrapolation schedules your recurring budget items across the date range
+                    you've selected. Here's how it works:
+                </Typography>
+                <Box component="ul" sx={{ pl: 2, my: 1 }}>
+                    <li>
+                        <Typography variant="body2">
+                            Your income items become columns in the schedule — one column per payday
+                        </Typography>
+                    </li>
+                    <li>
+                        <Typography variant="body2">
+                            Expenses are placed into the earliest column that can cover them
+                        </Typography>
+                    </li>
+                    <li>
+                        <Typography variant="body2">
+                            If an expense can't fit anywhere, it's marked as unscheduled for you to handle manually
+                        </Typography>
+                    </li>
+                    <li>
+                        <Typography variant="body2">
+                            Items you've already marked as paid are preserved
+                        </Typography>
+                    </li>
+                </Box>
+                <Typography variant="body1" gutterBottom sx={{ mt: 1 }}>
+                    After extrapolation, take a moment to review the results. The scheduling
+                    algorithm does its best, but you know your finances better than any algorithm.
+                </Typography>
+                <Typography variant="body1" gutterBottom>
+                    Once your schedule looks right, consider adding savings items to start
+                    building a safety net — even small amounts add up.
+                </Typography>
+                <Typography variant="body1" sx={{ mt: 1 }}>
+                    You've got this!
+                </Typography>
             </DialogContent>
             <DialogActions>
                 <Button variant="outlined" color="secondary" onClick={close}>

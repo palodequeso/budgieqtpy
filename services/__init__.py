@@ -8,6 +8,9 @@ from .account_service import AccountService
 from .budget_service import BudgetService
 from .ledger_service import LedgerService
 from .calendar_service import CalendarService
+from .ai_service import AIService
+from .debt_service import DebtService
+from .reconciliation_service import ReconciliationService
 
 __all__ = [
     'ProfileService',
@@ -15,4 +18,7 @@ __all__ = [
     'BudgetService',
     'LedgerService',
     'CalendarService',
+    'AIService',
+    'DebtService',
+    'ReconciliationService',
 ]

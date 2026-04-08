@@ -16,13 +16,14 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { DesktopDatePicker } from '@mui/x-date-pickers/DesktopDatePicker';
 import * as React from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import DateLabel from './date-label';
 import { api } from './renderUtils';
 import { useStore } from '../store';
 
 export default function LedgerItem({ ledgerItemId = '' }) {
     const params = useParams();
+    const navigate = useNavigate();
     const profile = useStore((state) => (state as any).profile);
     if (params.ledgerItemId) {
         ledgerItemId = params.ledgerItemId;
@@ -57,7 +58,6 @@ export default function LedgerItem({ ledgerItemId = '' }) {
     const [ledgerError, setLedgerError] = React.useState('');
 
     function changeBudgetItem(value) {
-        console.log('new ledger budget item changed', value);
         const budgetItemId = parseInt(value, 10);
         const budgetItem = budgetItems.find(
             (budgetItem) => budgetItem.id === budgetItemId,
@@ -89,8 +89,6 @@ export default function LedgerItem({ ledgerItemId = '' }) {
             income_date: typeof ledgerIncomeDate === 'string' ? ledgerIncomeDate : ledgerIncomeDate.toISOString().split('T')[0],
             notes: ledgerName,
         };
-        console.log('ledger item', ledgerItem);
-
         try {
             if (item?.id) {
                 await api.put(
@@ -100,8 +98,8 @@ export default function LedgerItem({ ledgerItemId = '' }) {
             } else {
                 await api.post(`/ledger/${profile.id}`, ledgerItem);
             }
-            // Redirect or refresh after success
-            window.location.hash = '#/accounts';
+            setLedgerError('');
+            navigate('/accounts');
         } catch (error) {
             setLedgerError(error.message);
         }

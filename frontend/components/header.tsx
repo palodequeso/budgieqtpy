@@ -7,9 +7,12 @@ import * as React from 'react';
 import { Link } from 'react-router-dom';
 
 const navLinks = [
-    { title: 'Calendar', path: '/' },
+    { title: 'Dashboard', path: '/' },
+    { title: 'Calendar', path: '/calendar' },
     { title: 'Accounts', path: '/accounts' },
     { title: 'Budget', path: '/budget' },
+    { title: 'Debts', path: '/debts' },
+    { title: 'Reconcile', path: '/reconcile' },
     { title: 'Profile', path: '/profile' },
     { title: 'Settings', path: '/settings' },
 ];

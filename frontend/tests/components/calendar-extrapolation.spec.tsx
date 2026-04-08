@@ -39,6 +39,7 @@ function setup() {
             setEditingCell={(entry) => {
                 callEntry = entry;
             }}
+            onReload={() => {}}
         />
         </table>,
     </Router>);

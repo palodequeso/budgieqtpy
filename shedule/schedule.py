@@ -69,7 +69,7 @@ class Schedule:
         # Create a dictionary of budget items
         for budget_item in self.budget_item_list:
             self.budget_items[budget_item.id] = budget_item
-            if budget_item.type == "Income":
+            if budget_item.type.lower() == "income":
                 self.income_budget_items.append(budget_item)
             else:
                 self.expense_budget_items.append(budget_item)
@@ -90,8 +90,21 @@ class Schedule:
         
         # Create the schedule
         for item in self.extrapolation_items:
-            # Skip items with no income_date (unscheduled items)
+            # Collect items with no income_date into unscheduled_entries
             if item.income_date is None:
+                budget_item = self.budget_items.get(item.budget_item_id, None)
+                entry = ScheduleEntry(
+                    budget_item.type if budget_item else "Expense",
+                    None,
+                    budget_item,
+                    []
+                )
+                entry.amount = item.amount
+                entry.due_date = item.due_date
+                entry.budget_item_id = item.budget_item_id
+                entry_item = ScheduleEntryItem(item)
+                entry.add_item(entry_item)
+                self.unscheduled_entries.append(entry)
                 continue
                 
             date_key = item.income_date.strftime("%Y-%m-%d")
@@ -115,6 +128,9 @@ class Schedule:
                 elif category == 'one_off':
                     synthetic_name = "One-off"
                     synthetic_id = "synthetic-one-off"
+                elif category == 'debt_payment':
+                    synthetic_name = "Debt Payment"
+                    synthetic_id = "synthetic-debt-payment"
                 else:
                     # Fallback for legacy items without category
                     synthetic_name = "One-off"
@@ -139,7 +155,8 @@ class Schedule:
                     self.budget_items[synthetic_id] = budget_item
 
             schedule_entry: ScheduleEntry = None
-            if budget_item.type == "Income":
+            is_income = budget_item.type.lower() == "income"
+            if is_income:
                 schedule_entry = next((e for e in self.columns[date_key].incomes if e.budget_item.id == budget_item.id), None)
             else:
                 schedule_entry = next((e for e in self.columns[date_key].expenses if e.budget_item.id == budget_item.id), None)
@@ -147,10 +164,10 @@ class Schedule:
                 schedule_entry = ScheduleEntry(
                     budget_item.type, item.income_date, budget_item, []
                 )
-                if budget_item.type == "Expense":
-                    self.columns[date_key].add_expense(schedule_entry)
+                if is_income:
+                    self.columns[date_key].add_income(schedule_entry)
                 else:
-                    self.columns[date_key].add_income(schedule_entry)  # TODO: Handle multiple incomes
+                    self.columns[date_key].add_expense(schedule_entry)
 
             entry_item = ScheduleEntryItem(item)
             if item.ledger_entry_id is not None:
@@ -173,7 +190,6 @@ class Schedule:
         for income_date in self.sorted_income_dates:
             column = self.columns.get(income_date.strftime("%Y-%m-%d"), None)
             if column is None:
-                print(f"column {income_date.strftime('%Y-%m-%d')} not found")
                 continue
 
             starting_balance = 0
@@ -188,10 +204,10 @@ class Schedule:
                     previous_income_date.strftime("%Y-%m-%d"), None
                 )
                 if previous_column is None:
-                    print(f"previous column {previous_income_date.strftime('%Y-%m-%d')} not found")
                     continue
                 starting_balance = previous_column.total()
-            # TODO: This is kinda hard, need to consider previous column total, and their ledger_item/extrapolation_item balance
+            # Starting balance: first column sums ledger entries before income date,
+            # subsequent columns use the previous column's total (income + expenses + carry)
             column.starting_balance = starting_balance
             previous_income_date = income_date
 

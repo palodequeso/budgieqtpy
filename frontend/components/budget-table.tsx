@@ -72,7 +72,6 @@ export default function BudgetTable({ removeBudgetItem }) {
     ];
     
     const budget = useStore((state) => (state as any).budget);
-    console.log('budget', budget);
     return (
         <DataGrid
             rows={budget}

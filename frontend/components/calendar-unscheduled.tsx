@@ -29,9 +29,15 @@ export default function CalendarUnscheduled({
                 return;
             }
 
+            // Map to the shape the API expects: { id, income_date }
+            const payload = unscheduled.map((u) => ({
+                id: u.id,
+                income_date: u.incomeDate,
+            }));
+
             await api.post(
                 `/calendar/${profile.id}/fixunscheduled`,
-                unscheduled,
+                payload,
             );
             close(true);
         } catch (e) {
@@ -54,7 +60,8 @@ export default function CalendarUnscheduled({
                             flexDirection: 'column',
                             padding: '1rem',
                             margin: '1rem',
-                            width: '216px',
+                            minWidth: '260px',
+                            maxWidth: '320px',
                         }}
                     >
                         <Typography>Name: {item.budgetItem.name}</Typography>
@@ -70,7 +77,6 @@ export default function CalendarUnscheduled({
                                 fullWidth
                                 defaultValue="0"
                                 onChange={(e) => {
-                                    console.log('select value', e.target.value);
                                     item.incomeDate = e.target.value;
                                 }}
                             >

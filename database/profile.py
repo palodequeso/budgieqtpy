@@ -26,8 +26,7 @@ class Profile:
         self.id = cursor.lastrowid
         self.created_at = datetime_now
 
-    staticmethod
-
+    @staticmethod
     def update_hidden_through(self, db, hidden_through):
         self.hidden_through = hidden_through
         cursor = db.cursor()
@@ -64,8 +63,7 @@ class Profile:
             output.append(Profile.from_row(row))
         return output
 
-    staticmethod
-
+    @staticmethod
     def create_table(db):
         cursor = db.cursor()
         cursor.execute(

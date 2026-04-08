@@ -16,9 +16,10 @@ from PyQt6.QtWidgets import (
     QCheckBox,
     QMessageBox,
     QScrollArea,
+    QTextEdit,
 )
 from PyQt6.QtGui import QColor, QBrush, QFont, QPalette
-from PyQt6.QtCore import pyqtSlot as Slot, QTimer, QEvent
+from PyQt6.QtCore import pyqtSlot as Slot, QTimer, QEvent, Qt
 from PyQt6.QtWidgets import QApplication
 from database.database import Database
 from database.extrapolation_item import ExtrapolationItem
@@ -34,33 +35,33 @@ locale.setlocale(locale.LC_ALL, "C")
 
 # Dark mode colors (darker shades with white text)
 MONTH_COLORS_DARK = [
-    QColor("#8B1515"),  # Red - darker than 900
-    QColor("#6B0A3C"),  # Pink - darker than 900
-    QColor("#380F6B"),  # Purple - darker than 900
-    QColor("#9D6A0A"),  # Yellow/Gold - much darker for contrast
-    QColor("#B84000"),  # Orange - darker than 900
-    QColor("#0A3677"),  # Blue - darker than 900
-    QColor("#014477"),  # Light Blue - darker than 900
-    QColor("#004D50"),  # Cyan - darker than 900
-    QColor("#003D32"),  # Teal - darker than 900
-    QColor("#154718"),  # Green - darker than 900
-    QColor("#285216"),  # Light Green - darker than 900
-    QColor("#665E12"),  # Lime/Olive - darker than 900
-    QColor("#1C262B"),  # Blue Grey - darker than 900
-    # alt colors (900 shades for variety)
-    QColor("#B71C1C"),  # Red 900
-    QColor("#880E4F"),  # Pink 900
-    QColor("#4A148C"),  # Purple 900
-    QColor("#C67D0D"),  # Yellow/Gold - darker custom shade
-    QColor("#E65100"),  # Orange 900
-    QColor("#0D47A1"),  # Blue 900
-    QColor("#01579B"),  # Light Blue 900
-    QColor("#006064"),  # Cyan 900
-    QColor("#004D40"),  # Teal 900
-    QColor("#1B5E20"),  # Green 900
-    QColor("#33691E"),  # Light Green 900
-    QColor("#827717"),  # Lime 900
-    QColor("#263238"),  # Blue Grey 900
+    QColor("#8B1515"),  # Jan - Red (darker than 900)
+    QColor("#6B0A3C"),  # Feb - Pink (darker than 900)
+    QColor("#380F6B"),  # Mar - Purple (darker than 900)
+    QColor("#9D6A0A"),  # Apr - Yellow/Gold
+    QColor("#B84000"),  # May - Orange (darker than 900)
+    QColor("#0A3677"),  # Jun - Blue (darker than 900)
+    QColor("#014477"),  # Jul - Light Blue (darker than 900)
+    QColor("#004D50"),  # Aug - Cyan (darker than 900)
+    QColor("#003D32"),  # Sep - Teal (darker than 900)
+    QColor("#154718"),  # Oct - Green (darker than 900)
+    QColor("#285216"),  # Nov - Light Green (darker than 900)
+    QColor("#665E12"),  # Dec - Lime/Olive (darker than 900)
+    QColor("#1C262B"),  # neutral (Blue Grey, darker than 900)
+    # alt colors (900 shades, second-half-of-month columns)
+    QColor("#B71C1C"),  # Jan alt - Red 900
+    QColor("#880E4F"),  # Feb alt - Pink 900
+    QColor("#4A148C"),  # Mar alt - Purple 900
+    QColor("#C67D0D"),  # Apr alt - Yellow/Gold 900
+    QColor("#E65100"),  # May alt - Orange 900
+    QColor("#0D47A1"),  # Jun alt - Blue 900
+    QColor("#01579B"),  # Jul alt - Light Blue 900
+    QColor("#006064"),  # Aug alt - Cyan 900
+    QColor("#004D40"),  # Sep alt - Teal 900
+    QColor("#1B5E20"),  # Oct alt - Green 900
+    QColor("#33691E"),  # Nov alt - Light Green 900
+    QColor("#827717"),  # Dec alt - Lime 900
+    QColor("#263238"),  # neutral alt - Blue Grey 900
 ]
 
 # Light mode colors (lighter shades with dark text)
@@ -130,6 +131,7 @@ class Calendar(QWidget):
         self.grid_entries = {}
         self.entry_widget = None
         self.schedule_widget = None
+        self.show_all_columns = False
 
         self.schedule_vertical_layout = QVBoxLayout()
         self.schedule_vertical_layout.setSpacing(12)
@@ -141,7 +143,7 @@ class Calendar(QWidget):
         title_layout = QHBoxLayout()
         title_layout.setContentsMargins(10, 5, 10, 5)
         
-        calendar_title = QLabel("📅 Budget Calendar")
+        calendar_title = QLabel("Budget Calendar")
         calendar_title_font = QFont()
         calendar_title_font.setPointSize(18)
         calendar_title_font.setBold(True)
@@ -188,11 +190,11 @@ class Calendar(QWidget):
         actions_row.setSpacing(10)
         
         # Primary action - Extrapolate
-        extrapolate_button = QPushButton("🔄 Extrapolate")
+        extrapolate_button = QPushButton("Extrapolate")
         extrapolate_button.setStyleSheet("""
             QPushButton {
-                background-color: #3498db;
-                color: white;
+                background-color: #1565c0;
+                color: #ffffff;
                 padding: 10px 20px;
                 border: none;
                 border-radius: 4px;
@@ -200,10 +202,10 @@ class Calendar(QWidget):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #5dade2;
+                background-color: #1976d2;
             }
             QPushButton:pressed {
-                background-color: #2980b9;
+                background-color: #0d47a1;
             }
         """)
         extrapolate_button.clicked.connect(
@@ -212,11 +214,11 @@ class Calendar(QWidget):
         actions_row.addWidget(extrapolate_button)
         
         # Success action - I Got Paid
-        got_paid_button = QPushButton("💰 I Got Paid")
+        got_paid_button = QPushButton("I Got Paid")
         got_paid_button.setStyleSheet("""
             QPushButton {
-                background-color: #27ae60;
-                color: white;
+                background-color: #2e7d32;
+                color: #ffffff;
                 padding: 10px 20px;
                 border: none;
                 border-radius: 4px;
@@ -224,21 +226,21 @@ class Calendar(QWidget):
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #2ecc71;
+                background-color: #388e3c;
             }
             QPushButton:pressed {
-                background-color: #229954;
+                background-color: #1b5e20;
             }
         """)
         got_paid_button.clicked.connect(self.got_paid)
         actions_row.addWidget(got_paid_button)
         
         # Warning action - Fix Unscheduled
-        self.fix_unscheduled_button = QPushButton("⚠️ Fix Unscheduled")
+        self.fix_unscheduled_button = QPushButton("Fix Unscheduled")
         self.fix_unscheduled_button.setStyleSheet("""
             QPushButton {
-                background-color: #e74c3c;
-                color: white;
+                background-color: #c62828;
+                color: #ffffff;
                 padding: 10px 20px;
                 border: none;
                 border-radius: 4px;
@@ -246,10 +248,10 @@ class Calendar(QWidget):
                 font-weight: bold;
             }
             QPushButton:hover:enabled {
-                background-color: #c0392b;
+                background-color: #d32f2f;
             }
             QPushButton:pressed:enabled {
-                background-color: #a93226;
+                background-color: #b71c1c;
             }
             QPushButton:disabled {
                 background-color: #7f8c8d;
@@ -263,78 +265,50 @@ class Calendar(QWidget):
         actions_row.addStretch(1)
         
         # Secondary actions
-        add_one_off_button = QPushButton("➕ Add One-Off")
-        add_one_off_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        add_one_off_button = QPushButton("Add One-Off")
+        add_one_off_button.setStyleSheet("font-size: 11px; font-weight: bold; padding: 8px 16px;")
         add_one_off_button.clicked.connect(self.add_one_off_entry)
         actions_row.addWidget(add_one_off_button)
         
-        add_savings_items_button = QPushButton("💎 Add Savings")
-        add_savings_items_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        add_savings_items_button = QPushButton("Add Savings")
+        add_savings_items_button.setStyleSheet("font-size: 11px; font-weight: bold; padding: 8px 16px;")
         add_savings_items_button.clicked.connect(self.set_savings_items)
         actions_row.addWidget(add_savings_items_button)
         
-        hide_current_column_button = QPushButton("👁️ Hide Column")
-        hide_current_column_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        hide_current_column_button = QPushButton("Hide Column")
+        hide_current_column_button.setStyleSheet("font-size: 11px; font-weight: bold; padding: 8px 16px;")
         hide_current_column_button.clicked.connect(self.hide_current_column)
         actions_row.addWidget(hide_current_column_button)
-        
-        export_spreadsheet_button = QPushButton("📊 Export")
-        export_spreadsheet_button.setStyleSheet("""
+
+        self.show_hidden_button = QPushButton("Show Hidden")
+        self.show_hidden_button.setStyleSheet("font-size: 11px; font-weight: bold; padding: 8px 16px;")
+        self.show_hidden_button.clicked.connect(self.toggle_show_hidden)
+        self.show_hidden_button.setVisible(bool(self.selected_profile.hidden_through))
+        actions_row.addWidget(self.show_hidden_button)
+
+        export_spreadsheet_button = QPushButton("Export")
+        export_spreadsheet_button.setStyleSheet("font-size: 11px; font-weight: bold; padding: 8px 16px;")
+        export_spreadsheet_button.clicked.connect(self.export_spreadsheet)
+        actions_row.addWidget(export_spreadsheet_button)
+
+        ai_analysis_button = QPushButton("AI Analysis")
+        ai_analysis_button.setStyleSheet("""
             QPushButton {
-                background-color: #7f8c8d;
-                color: white;
+                background-color: #6a1b9a;
+                color: #ffffff;
                 padding: 8px 16px;
                 border: none;
                 border-radius: 4px;
                 font-size: 11px;
-                font-weight: 500;
+                font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #95a5a6;
+                background-color: #7b1fa2;
             }
         """)
-        export_spreadsheet_button.clicked.connect(self.export_spreadsheet)
-        actions_row.addWidget(export_spreadsheet_button)
-        
+        ai_analysis_button.clicked.connect(self.run_ai_analysis)
+        actions_row.addWidget(ai_analysis_button)
+
         controls_layout.addLayout(actions_row)
         controls_container.setLayout(controls_layout)
         self.schedule_vertical_layout.addWidget(controls_container)
@@ -375,25 +349,35 @@ class Calendar(QWidget):
         return avg_bg_luminance < 128
     
     def date_to_color(self, date, dull=False):
+        """Color cells by month — matches the web app's logic.
+        Regular cells: darker shade (indices 0-11)
+        Dull/summary cells: neutral blueGrey (index 12) for Carry/Income/Total rows
+        Empty expense cells use the alt shade (indices 13-24) of the month
+        """
         colors = MONTH_COLORS_DARK if self.is_dark_mode() else MONTH_COLORS_LIGHT
+        month_idx = date.month - 1
         if dull:
-            if date.day >= 15:
-                return colors[25]
-            return colors[12]
-        if date.day >= 15:
-            return colors[(date.month - 1) + 13]
-        return colors[date.month - 1]
+            return colors[12]  # Neutral blueGrey for summary rows
+        return colors[month_idx]
+
+    def date_to_empty_color(self, date):
+        """Color for empty expense cells — brighter alt shade of the month."""
+        colors = MONTH_COLORS_DARK if self.is_dark_mode() else MONTH_COLORS_LIGHT
+        return colors[(date.month - 1) + 13]
 
     def format_currency(self, amount):
         return "${:,.2f}".format(amount)
         # return locale.currency(amount, grouping=True)
 
-    def create_cell(self, date, value: float, bold=False, dull=False, paid=False):
+    def create_cell(self, date, value: float, bold=False, dull=False, paid=False, empty=False):
         out_str = ""
         if value is not None:
             out_str = self.format_currency(value)
         item = QTableWidgetItem(out_str)
-        item.setBackground(QBrush(self.date_to_color(date, dull)))
+        if empty:
+            item.setBackground(QBrush(self.date_to_empty_color(date)))
+        else:
+            item.setBackground(QBrush(self.date_to_color(date, dull)))
         # Set text color based on theme
         text_color = QColor("#FFFFFF") if self.is_dark_mode() else QColor("#000000")
         item.setForeground(QBrush(text_color))
@@ -406,6 +390,45 @@ class Calendar(QWidget):
             f.setStrikeOut(True)
             item.setFont(f)
         return item
+
+    def run_ai_analysis(self):
+        """Run AI analysis on the current budget schedule."""
+        from services.ai_service import AIService
+        from PyQt6.QtCore import QCoreApplication
+
+        db = Database()
+        service = AIService(db)
+        config = service.get_config()
+
+        if not config["enabled"] or not config["server_url"]:
+            QMessageBox.information(self, "AI Analysis",
+                "AI analysis is not configured.\nGo to Settings to set up an AI server URL and model.")
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("AI Budget Analysis")
+        dialog.resize(600, 500)
+        layout = QVBoxLayout(dialog)
+
+        result_text = QTextEdit()
+        result_text.setReadOnly(True)
+        result_text.setText("Analyzing your budget...")
+        layout.addWidget(result_text)
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+
+        dialog.show()
+
+        # Process events so dialog renders before blocking call
+        QCoreApplication.processEvents()
+
+        result = service.analyze(self.selected_profile.id)
+        if "error" in result:
+            result_text.setText(result["error"])
+        else:
+            result_text.setMarkdown(result.get("analysis", "No analysis returned"))
 
     def export_spreadsheet(self):
         """Export schedule to ODS spreadsheet file."""
@@ -496,10 +519,10 @@ class Calendar(QWidget):
         layout.addWidget(QLabel(f"Ending Balance: {self.format_currency(column.total())}"))
         
         if not all_paid:
-            layout.addWidget(QLabel(f"\n⚠️ Warning: {len(unpaid_items)} unpaid item(s) in this column!"))
+            layout.addWidget(QLabel(f"\nWarning: {len(unpaid_items)} unpaid item(s) in this column!"))
             layout.addWidget(QLabel("Items will remain in database but hidden from view."))
         else:
-            layout.addWidget(QLabel("\n✅ All items in this column are paid."))
+            layout.addWidget(QLabel("\nAll items in this column are paid."))
         
         layout.addWidget(QLabel("\nHiding this column will remove it from the schedule view."))
         
@@ -532,9 +555,12 @@ class Calendar(QWidget):
             
             # Update the selected_profile object
             self.selected_profile.hidden_through = date_key
-            
+
             dialog.accept()
-            
+
+            # Show the "Show Hidden" button now that hidden_through is set
+            self.show_hidden_button.setVisible(True)
+
             # Refresh schedule (will now filter based on hidden_through)
             self._refresh_schedule()
             
@@ -545,6 +571,15 @@ class Calendar(QWidget):
             
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to hide column: {str(e)}")
+
+    def toggle_show_hidden(self):
+        """Toggle visibility of hidden (past) columns."""
+        self.show_all_columns = not self.show_all_columns
+        if self.show_all_columns:
+            self.show_hidden_button.setText("Hide Past")
+        else:
+            self.show_hidden_button.setText("Show Hidden")
+        self._refresh_schedule()
 
     def select_entry(self, entry: ScheduleEntry):
         """Open modal dialog to view and edit schedule entry (matches React pattern)."""
@@ -591,7 +626,7 @@ class Calendar(QWidget):
         layout.addWidget(summary_widget)
         
         # Items section with header
-        items_header = QLabel(f"📋 Scheduled Expenses ({len(entry.items)} item{'s' if len(entry.items) != 1 else ''})")
+        items_header = QLabel(f"Scheduled Expenses ({len(entry.items)} item{'s' if len(entry.items) != 1 else ''})")
         items_header_font = QFont()
         items_header_font.setPointSize(13)
         items_header_font.setBold(True)
@@ -616,9 +651,17 @@ class Calendar(QWidget):
                 num_label = QLabel(f"#{idx + 1}")
                 num_label.setStyleSheet("font-weight: bold; font-size: 11px;")
                 item_layout.addWidget(num_label)
-            
+
+            # Name (e.g., debt name for debt payments)
+            item_name = getattr(item.extrapolation_item, 'name', None)
+            if item_name:
+                name_label = QLabel(item_name)
+                name_label.setMinimumWidth(100)
+                name_label.setStyleSheet("font-size: 11px; font-weight: bold;")
+                item_layout.addWidget(name_label)
+
             # Date
-            date_label = QLabel(f"📅 {item.extrapolation_item.due_date.strftime('%Y-%m-%d')}")
+            date_label = QLabel(f"{item.extrapolation_item.due_date.strftime('%Y-%m-%d')}")
             date_label.setMinimumWidth(110)
             date_label.setStyleSheet("font-size: 11px;")
             item_layout.addWidget(date_label)
@@ -634,30 +677,32 @@ class Calendar(QWidget):
             
             # Status / Action
             if item.ledger_entry is not None:
-                paid_label = QLabel("✅ Paid")
-                paid_label.setStyleSheet("color: #27ae60; font-weight: bold; font-size: 11px;")
+                paid_label = QLabel("Paid")
+                paid_label.setStyleSheet("color: #27ae60; font-weight: bold; font-size: 12px;")
                 item_layout.addWidget(paid_label)
             else:
-                mark_paid_button = QPushButton("💳 Mark as Paid")
-                mark_paid_button.setStyleSheet("""
-                    QPushButton {
-                        background-color: #3498db;
-                        color: white;
-                        padding: 6px 14px;
-                        border: none;
-                        border-radius: 4px;
-                        font-size: 11px;
-                        font-weight: 500;
-                    }
-                    QPushButton:hover {
-                        background-color: #5dade2;
-                    }
-                """)
+                btn_style = "font-size: 12px; font-weight: bold; padding: 6px 14px; border: 1px solid #546e7a; border-radius: 4px;"
+                mark_paid_button = QPushButton("Mark Paid")
+                mark_paid_button.setStyleSheet(btn_style)
                 mark_paid_button.clicked.connect(
                     lambda checked=False, i=item, e=entry, d=dialog: self.mark_paid_and_refresh(i, e, d)
                 )
                 item_layout.addWidget(mark_paid_button)
-            
+
+                move_button = QPushButton("Move")
+                move_button.setStyleSheet(btn_style)
+                move_button.clicked.connect(
+                    lambda checked=False, i=item, e=entry, d=dialog: self._move_single_item(i, e, d)
+                )
+                item_layout.addWidget(move_button)
+
+                split_button = QPushButton("Split")
+                split_button.setStyleSheet(btn_style)
+                split_button.clicked.connect(
+                    lambda checked=False, i=item, e=entry, d=dialog: self._split_single_item(i, e, d)
+                )
+                item_layout.addWidget(split_button)
+
             item_container.setLayout(item_layout)
             scroll_layout.addWidget(item_container)
         
@@ -669,21 +714,8 @@ class Calendar(QWidget):
         # Close button
         button_layout = QHBoxLayout()
         button_layout.addStretch(1)
-        close_button = QPushButton("✕ Close")
-        close_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 8px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        close_button = QPushButton("Close")
+        close_button.setStyleSheet("font-size: 12px; font-weight: bold; padding: 8px 24px;")
         close_button.clicked.connect(dialog.accept)
         button_layout.addWidget(close_button)
         layout.addLayout(button_layout)
@@ -698,6 +730,191 @@ class Calendar(QWidget):
         # Call the existing mark_paid method which will open its own dialog
         self.mark_paid(item, entry)
 
+    def _move_single_item(self, item, entry, parent_dialog):
+        """Move a single extrapolation item to a different income column from the entry detail dialog."""
+        input_style = "padding: 10px; font-size: 14px;"
+        label_font = QFont()
+        label_font.setPointSize(11)
+        label_font.setBold(True)
+        btn_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Move Item")
+        dialog.setMinimumWidth(400)
+        layout = QVBoxLayout()
+        layout.setSpacing(8)
+        layout.setContentsMargins(20, 20, 20, 16)
+
+        info = QLabel(f"Move '{entry.budget_item.name}' (${abs(item.extrapolation_item.amount):,.2f})")
+        info.setFont(label_font)
+        info.setWordWrap(True)
+        layout.addWidget(info)
+
+        from_label = QLabel(f"From: {entry.income_date.strftime('%Y-%m-%d')}")
+        from_label.setStyleSheet("font-size: 13px; color: #90a4ae;")
+        layout.addWidget(from_label)
+        layout.addSpacing(8)
+
+        dest_label = QLabel("Move to")
+        dest_label.setFont(label_font)
+        layout.addWidget(dest_label)
+
+        dest_combo = QComboBox()
+        dest_combo.setStyleSheet(input_style)
+        dest_combo.setMinimumHeight(40)
+        current_date_str = entry.income_date.strftime("%Y-%m-%d")
+        for inc_date in self.schedule.sorted_income_dates:
+            ds = inc_date.strftime("%Y-%m-%d")
+            if ds != current_date_str:
+                col = self.schedule.columns.get(inc_date)
+                balance = col.total() if col else 0
+                dest_combo.addItem(f"{ds}  (balance: ${balance:,.2f})", ds)
+        layout.addWidget(dest_combo)
+        layout.addSpacing(12)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setStyleSheet(btn_style)
+        cancel_btn.setMinimumHeight(40)
+        cancel_btn.clicked.connect(dialog.reject)
+        btn_row.addWidget(cancel_btn)
+
+        move_btn = QPushButton("Move")
+        move_btn.setStyleSheet(btn_style)
+        move_btn.setMinimumHeight(40)
+        btn_row.addWidget(move_btn)
+        layout.addLayout(btn_row)
+
+        def do_move():
+            to_date = dest_combo.currentData()
+            if not to_date:
+                return
+            try:
+                self.db.move_extrapolation_items(
+                    self.selected_profile.id, entry.budget_item.id,
+                    current_date_str, to_date
+                )
+                dialog.accept()
+                parent_dialog.accept()
+                QMessageBox.information(self, "Moved", f"Item moved to {to_date}.")
+                self._refresh_schedule()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to move: {str(e)}")
+
+        move_btn.clicked.connect(do_move)
+        dialog.setLayout(layout)
+        dialog.exec()
+
+    def _split_single_item(self, item, entry, parent_dialog):
+        """Split a single extrapolation item from the entry detail dialog."""
+        input_style = "padding: 10px; font-size: 14px;"
+        label_font = QFont()
+        label_font.setPointSize(11)
+        label_font.setBold(True)
+        btn_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+
+        total_amount = abs(float(item.extrapolation_item.amount))
+        item_id = item.extrapolation_item.id
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Split Item")
+        dialog.setMinimumWidth(400)
+        layout = QVBoxLayout()
+        layout.setSpacing(8)
+        layout.setContentsMargins(20, 20, 20, 16)
+
+        info = QLabel(f"Split '{entry.budget_item.name}'")
+        info.setFont(label_font)
+        layout.addWidget(info)
+
+        total_lbl = QLabel(f"Total: ${total_amount:,.2f}")
+        total_lbl.setStyleSheet("font-size: 13px; color: #90a4ae;")
+        layout.addWidget(total_lbl)
+        layout.addSpacing(8)
+
+        keep_label = QLabel("Amount to keep in this period")
+        keep_label.setFont(label_font)
+        layout.addWidget(keep_label)
+
+        keep_input = QLineEdit(f"{total_amount / 2:.2f}")
+        keep_input.setStyleSheet(input_style)
+        keep_input.setMinimumHeight(40)
+        layout.addWidget(keep_input)
+
+        remainder_label = QLabel(f"Remainder: ${total_amount / 2:,.2f}")
+        remainder_label.setStyleSheet("font-size: 13px; font-weight: bold;")
+        layout.addWidget(remainder_label)
+
+        def update_remainder():
+            try:
+                keep = float(keep_input.text())
+                rem = total_amount - keep
+                remainder_label.setText(f"Remainder: ${rem:,.2f}")
+                if rem <= 0 or keep <= 0:
+                    remainder_label.setStyleSheet("font-size: 13px; font-weight: bold; color: #ef5350;")
+                else:
+                    remainder_label.setStyleSheet("font-size: 13px; font-weight: bold;")
+            except ValueError:
+                remainder_label.setText("Remainder: --")
+
+        keep_input.textChanged.connect(update_remainder)
+        layout.addSpacing(8)
+
+        dest_label = QLabel("Move remainder to")
+        dest_label.setFont(label_font)
+        layout.addWidget(dest_label)
+
+        dest_combo = QComboBox()
+        dest_combo.setStyleSheet(input_style)
+        dest_combo.setMinimumHeight(40)
+        current_date_str = entry.income_date.strftime("%Y-%m-%d")
+        dest_combo.addItem(f"{current_date_str}  (same column)", current_date_str)
+        for inc_date in self.schedule.sorted_income_dates:
+            ds = inc_date.strftime("%Y-%m-%d")
+            if ds != current_date_str:
+                dest_combo.addItem(ds, ds)
+        layout.addWidget(dest_combo)
+        layout.addSpacing(12)
+
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        cancel_btn = QPushButton("Cancel")
+        cancel_btn.setStyleSheet(btn_style)
+        cancel_btn.setMinimumHeight(40)
+        cancel_btn.clicked.connect(dialog.reject)
+        btn_row.addWidget(cancel_btn)
+
+        split_btn = QPushButton("Split")
+        split_btn.setStyleSheet(btn_style)
+        split_btn.setMinimumHeight(40)
+        btn_row.addWidget(split_btn)
+        layout.addLayout(btn_row)
+
+        def do_split():
+            try:
+                keep = float(keep_input.text())
+            except ValueError:
+                QMessageBox.warning(dialog, "Invalid", "Enter a valid amount.")
+                return
+            if keep <= 0 or keep >= total_amount:
+                QMessageBox.warning(dialog, "Invalid", "Keep amount must be between 0 and the total.")
+                return
+
+            remainder_date = dest_combo.currentData()
+            try:
+                self.db.split_extrapolation_item(item_id, keep, remainder_date)
+                dialog.accept()
+                parent_dialog.accept()
+                QMessageBox.information(self, "Split", f"Item split: ${keep:,.2f} kept, ${total_amount - keep:,.2f} moved to {remainder_date}.")
+                self._refresh_schedule()
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to split: {str(e)}")
+
+        split_btn.clicked.connect(do_split)
+        dialog.setLayout(layout)
+        dialog.exec()
+
     def got_paid(self):
         accounts = self.db.fetch_accounts(self.selected_profile.id)
 
@@ -706,9 +923,16 @@ class Calendar(QWidget):
         got_paid_dialog.setMinimumWidth(400)
         got_paid_layout = QVBoxLayout()
         got_paid_layout.setSpacing(12)
-        got_paid_layout.setContentsMargins(16, 16, 16, 16)
+        got_paid_layout.setContentsMargins(20, 20, 20, 16)
 
-        dialog_label = QLabel("🎉 Hooray, it's payday!")
+        field_label_font = QFont()
+        field_label_font.setPointSize(11)
+        field_label_font.setBold(True)
+
+        input_style = "padding: 10px; font-size: 14px;"
+        button_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+
+        dialog_label = QLabel("Hooray, it's payday!")
         dialog_label_font = QFont()
         dialog_label_font.setPointSize(14)
         dialog_label_font.setBold(True)
@@ -726,7 +950,7 @@ class Calendar(QWidget):
                 income_entry = column.incomes[0]
                 if not income_entry.all_paid():
                     unpaid_income_dates.append(income_date)
-        
+
         if not unpaid_income_dates:
             QMessageBox.information(
                 self,
@@ -735,67 +959,48 @@ class Calendar(QWidget):
             )
             return
 
+        got_paid_layout.addSpacing(8)
+
         # Income date selection
         date_label = QLabel("Income Date")
-        date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 4px;")
+        date_label.setFont(field_label_font)
         got_paid_layout.addWidget(date_label)
-        
+
         income_date_selector = QComboBox()
         income_date_selector.addItems(
             [x.strftime("%Y-%m-%d") for x in unpaid_income_dates]
         )
+        income_date_selector.setStyleSheet(input_style)
+        income_date_selector.setMinimumHeight(40)
         got_paid_layout.addWidget(income_date_selector)
+
+        got_paid_layout.addSpacing(8)
 
         # Account selection
         account_label = QLabel("Deposit to Account")
-        account_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        account_label.setFont(field_label_font)
         got_paid_layout.addWidget(account_label)
-        
+
         account_selector = QComboBox()
         for account in accounts:
             account_selector.addItem(account.name)
+        account_selector.setStyleSheet(input_style)
+        account_selector.setMinimumHeight(40)
         got_paid_layout.addWidget(account_selector)
 
         got_paid_layout.addStretch(1)
 
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch(1)
-        cancel_button = QPushButton("❌ Cancel")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet(button_style)
+        cancel_button.setMinimumHeight(40)
         cancel_button.clicked.connect(lambda: got_paid_dialog.close())
         buttons_layout.addWidget(cancel_button)
-        
-        save_button = QPushButton("💰 Mark as Received")
-        save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #2ecc71;
-            }
-            QPushButton:pressed {
-                background-color: #229954;
-            }
-        """)
+
+        save_button = QPushButton("Mark as Received")
+        save_button.setStyleSheet(button_style)
+        save_button.setMinimumHeight(40)
         save_button.clicked.connect(
             lambda: self.got_paid_save(
                 income_date_selector.currentText(),
@@ -827,109 +1032,101 @@ class Calendar(QWidget):
         mark_paid_dialog.setMinimumWidth(450)
         mark_paid_layout = QVBoxLayout()
         mark_paid_layout.setSpacing(12)
-        mark_paid_layout.setContentsMargins(16, 16, 16, 16)
+        mark_paid_layout.setContentsMargins(20, 20, 20, 16)
+
+        field_label_font = QFont()
+        field_label_font.setPointSize(11)
+        field_label_font.setBold(True)
+
+        input_style = "padding: 10px; font-size: 14px;"
+        button_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
 
         # Header section
         header_widget = QWidget()
         header_widget.setStyleSheet("padding: 12px; border-radius: 6px;")
         header_layout = QVBoxLayout()
         header_layout.setSpacing(4)
-        
-        name_label = QLabel("💳 " + entry.budget_item.name)
+
+        name_label = QLabel(entry.budget_item.name)
         name_font = QFont()
         name_font.setPointSize(14)
         name_font.setBold(True)
         name_label.setFont(name_font)
         header_layout.addWidget(name_label)
-        
+
         type_label = QLabel(f"Type: {entry.budget_item.type}")
-        type_label.setStyleSheet("font-size: 11px;")
+        type_label.setStyleSheet("font-size: 13px;")
         header_layout.addWidget(type_label)
-        
+
         income_date_label = QLabel(f"Income Date: {entry.income_date.strftime('%Y-%m-%d')}")
-        income_date_label.setStyleSheet("font-size: 11px;")
+        income_date_label.setStyleSheet("font-size: 13px;")
         header_layout.addWidget(income_date_label)
-        
+
         due_date_label = QLabel(f"Due Date: {item.extrapolation_item.due_date.strftime('%Y-%m-%d')}")
-        due_date_label.setStyleSheet("color: #3498db; font-size: 11px; font-weight: bold;")
+        due_date_label.setStyleSheet("color: #3498db; font-size: 13px; font-weight: bold;")
         header_layout.addWidget(due_date_label)
-        
+
         header_widget.setLayout(header_layout)
         mark_paid_layout.addWidget(header_widget)
 
+        mark_paid_layout.addSpacing(8)
+
         # Account selection
         account_label = QLabel("Account")
-        account_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        account_label.setFont(field_label_font)
         mark_paid_layout.addWidget(account_label)
-        
+
         account_help = QLabel("Which account was this paid from?")
-        account_help.setStyleSheet("font-size: 10px; font-style: italic;")
+        account_help.setStyleSheet("font-size: 13px; font-style: italic;")
         mark_paid_layout.addWidget(account_help)
-        
+
         account_combobox = QComboBox()
         for account in accounts:
             account_combobox.addItem(account.name)
+        account_combobox.setStyleSheet(input_style)
+        account_combobox.setMinimumHeight(40)
         mark_paid_layout.addWidget(account_combobox)
+
+        mark_paid_layout.addSpacing(8)
 
         # Amount
         amount_label = QLabel("Actual Paid Amount")
-        amount_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        amount_label.setFont(field_label_font)
         mark_paid_layout.addWidget(amount_label)
-        
+
         paid_amount_widget = QLineEdit()
         paid_amount_widget.setText(str(item.extrapolation_item.amount))
+        paid_amount_widget.setStyleSheet(input_style)
+        paid_amount_widget.setMinimumHeight(40)
         mark_paid_layout.addWidget(paid_amount_widget)
+
+        mark_paid_layout.addSpacing(8)
 
         # Date
         date_label = QLabel("Actual Paid Date")
-        date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        date_label.setFont(field_label_font)
         mark_paid_layout.addWidget(date_label)
-        
+
         paid_date_widget = QDateEdit()
         paid_date_widget.setDate(date.today())
         paid_date_widget.setCalendarPopup(True)
+        paid_date_widget.setStyleSheet(input_style)
+        paid_date_widget.setMinimumHeight(40)
         mark_paid_layout.addWidget(paid_date_widget)
 
         mark_paid_layout.addStretch(1)
 
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch(1)
-        cancel_button = QPushButton("❌ Cancel")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet(button_style)
+        cancel_button.setMinimumHeight(40)
         buttons_layout.addWidget(cancel_button)
         cancel_button.clicked.connect(lambda: mark_paid_dialog.close())
-        
-        ok_button = QPushButton("✅ Save Payment")
-        ok_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5dade2;
-            }
-            QPushButton:pressed {
-                background-color: #2980b9;
-            }
-        """)
+
+        ok_button = QPushButton("Save Payment")
+        ok_button.setStyleSheet(button_style)
+        ok_button.setMinimumHeight(40)
         buttons_layout.addWidget(ok_button)
         ok_button.clicked.connect(
             lambda: self.mark_paid_with_ledger(
@@ -989,12 +1186,6 @@ class Calendar(QWidget):
         # before we delete/recreate widgets in render_schedule
         QTimer.singleShot(100, lambda: self._refresh_schedule())
     
-    def _refresh_schedule(self):
-        """Refresh schedule display - called after dialogs are fully closed."""
-        self.schedule.fetch_schedule(self.db, self.selected_profile.id)
-        self.schedule.build_schedule()
-        self.render_schedule(self.schedule_container_layout)
-
     @Slot(QTableWidgetItem)
     def cell_clicked(self, item):
         entry = self.grid_entries.get((item.row(), item.column()), None)
@@ -1003,92 +1194,166 @@ class Calendar(QWidget):
 
         self.select_entry(entry)
 
+    def _quick_mark_paid(self, row, col):
+        """Double-click handler: quickly mark a single unpaid expense item as paid."""
+        entry = self.grid_entries.get((row, col), None)
+        if entry is None or not entry.items:
+            return
+
+        unpaid_items = [item for item in entry.items if item.ledger_entry is None]
+        if not unpaid_items:
+            return  # Everything already paid
+
+        if len(unpaid_items) == 1:
+            # Exactly one unpaid item -- quick-pay with first available account
+            item = unpaid_items[0]
+            accounts = self.db.fetch_accounts(self.selected_profile.id)
+            if not accounts:
+                QMessageBox.warning(self, "No Accounts", "No accounts available to record payment.")
+                return
+
+            reply = QMessageBox.question(
+                self,
+                "Quick Mark Paid",
+                f"Mark '{entry.budget_item.name}' (${abs(item.extrapolation_item.amount):,.2f}) as paid?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+
+            try:
+                self.ledger_service.mark_extrapolation_item_paid(
+                    extrapolation_item_id=item.extrapolation_item.id,
+                    account_id=accounts[0].id,
+                    paid_date=date.today().isoformat(),
+                )
+                QMessageBox.information(self, "Paid", f"'{entry.budget_item.name}' marked as paid.")
+                QTimer.singleShot(100, self._refresh_schedule)
+            except Exception as e:
+                QMessageBox.critical(self, "Error", f"Failed to mark paid: {str(e)}")
+        else:
+            # Multiple unpaid items -- open the detail dialog so user can choose
+            self.select_entry(entry)
+
     def add_one_off_entry(self):
         one_off_dialog = QDialog()
         one_off_dialog.setWindowTitle("Add One-Off Entry")
         one_off_dialog.setMinimumWidth(450)
         one_off_layout = QVBoxLayout()
         one_off_layout.setSpacing(12)
-        one_off_layout.setContentsMargins(16, 16, 16, 16)
-        
+        one_off_layout.setContentsMargins(20, 20, 20, 16)
+
+        field_label_font = QFont()
+        field_label_font.setPointSize(11)
+        field_label_font.setBold(True)
+
+        input_style = "padding: 10px; font-size: 14px;"
+        button_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+
         # Header
-        header_label = QLabel("➕ Add One-Off Entry")
+        header_label = QLabel("Add One-Off Entry")
         header_font = QFont()
         header_font.setPointSize(14)
         header_font.setBold(True)
         header_label.setFont(header_font)
         header_label.setStyleSheet("margin-bottom: 8px;")
         one_off_layout.addWidget(header_label)
-        
+
         desc_label = QLabel("Create a single non-recurring budget entry")
-        desc_label.setStyleSheet("font-size: 11px; margin-bottom: 8px;")
+        desc_label.setStyleSheet("font-size: 13px; margin-bottom: 8px;")
         one_off_layout.addWidget(desc_label)
+
+        one_off_layout.addSpacing(8)
 
         # Name
         name_label = QLabel("Name")
-        name_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        name_label.setFont(field_label_font)
         one_off_layout.addWidget(name_label)
-        
+
         name_widget = QLineEdit()
         name_widget.setPlaceholderText("e.g., Car Repair")
+        name_widget.setStyleSheet(input_style)
+        name_widget.setMinimumHeight(40)
         one_off_layout.addWidget(name_widget)
+
+        one_off_layout.addSpacing(8)
 
         # Amount
         amount_label = QLabel("Amount")
-        amount_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        amount_label.setFont(field_label_font)
         one_off_layout.addWidget(amount_label)
-        
+
         amount_widget = QLineEdit('0.00')
+        amount_widget.setStyleSheet(input_style)
+        amount_widget.setMinimumHeight(40)
         one_off_layout.addWidget(amount_widget)
+
+        one_off_layout.addSpacing(8)
 
         # Type
         type_label = QLabel("Type")
-        type_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        type_label.setFont(field_label_font)
         one_off_layout.addWidget(type_label)
-        
+
         type_widget = QComboBox()
         type_widget.addItem("Expense")
         type_widget.addItem("Income")
+        type_widget.setStyleSheet(input_style)
+        type_widget.setMinimumHeight(40)
         one_off_layout.addWidget(type_widget)
+
+        one_off_layout.addSpacing(8)
 
         # Due Date
         date_label = QLabel("Due Date")
-        date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        date_label.setFont(field_label_font)
         one_off_layout.addWidget(date_label)
-        
+
         date_widget = QDateEdit(date.today())
         date_widget.setCalendarPopup(True)
+        date_widget.setStyleSheet(input_style)
+        date_widget.setMinimumHeight(40)
         one_off_layout.addWidget(date_widget)
+
+        one_off_layout.addSpacing(8)
 
         # Income Date
         income_date_label = QLabel("Income Date")
-        income_date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        income_date_label.setFont(field_label_font)
         one_off_layout.addWidget(income_date_label)
-        
+
         income_date_widget = QComboBox()
         income_date_widget.addItems([x.strftime("%Y-%m-%d") for x in self.schedule.sorted_income_dates])
+        income_date_widget.setStyleSheet(input_style)
+        income_date_widget.setMinimumHeight(40)
         one_off_layout.addWidget(income_date_widget)
+
+        one_off_layout.addSpacing(8)
 
         # Paid checkbox
         paid_widget = QCheckBox("Mark as already paid")
         paid_widget.setStyleSheet("""
             QCheckBox {
-                font-size: 11px;
+                font-size: 13px;
                 margin-top: 8px;
             }
         """)
         one_off_layout.addWidget(paid_widget)
-        
+
+        one_off_layout.addSpacing(8)
+
         # Account (only enabled if paid)
         account_label = QLabel("Account")
-        account_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
+        account_label.setFont(field_label_font)
         one_off_layout.addWidget(account_label)
-        
+
         account_widget = QComboBox()
         accounts = self.db.fetch_accounts(self.selected_profile.id)
         for account in accounts:
             account_widget.addItem(account.name)
         account_widget.setEnabled(False)
+        account_widget.setStyleSheet(input_style)
+        account_widget.setMinimumHeight(40)
         paid_widget.checkStateChanged.connect(lambda: account_widget.setEnabled(paid_widget.isChecked()))
         one_off_layout.addWidget(account_widget)
 
@@ -1097,43 +1362,16 @@ class Calendar(QWidget):
         # Buttons
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch(1)
-        
-        cancel_button = QPushButton("❌ Cancel")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet(button_style)
+        cancel_button.setMinimumHeight(40)
         cancel_button.clicked.connect(lambda: one_off_dialog.close())
         buttons_layout.addWidget(cancel_button)
-        
-        ok_button = QPushButton("✅ Save Entry")
-        ok_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5dade2;
-            }
-            QPushButton:pressed {
-                background-color: #2980b9;
-            }
-        """)
+
+        ok_button = QPushButton("Save Entry")
+        ok_button.setStyleSheet(button_style)
+        ok_button.setMinimumHeight(40)
         ok_button.clicked.connect(
             lambda: self.save_one_off_entry(
                 name_widget.text(),
@@ -1195,20 +1433,20 @@ class Calendar(QWidget):
         
         layout = QVBoxLayout()
         layout.setSpacing(12)
-        layout.setContentsMargins(16, 16, 16, 16)
-        
+        layout.setContentsMargins(20, 20, 20, 16)
+
         # Header
-        header_label = QLabel(f"⚠️ Fix Unscheduled Items")
+        header_label = QLabel(f"Fix Unscheduled Items")
         header_font = QFont()
         header_font.setPointSize(14)
         header_font.setBold(True)
         header_label.setFont(header_font)
-        header_label.setStyleSheet("color: #ecf0f1; margin-bottom: 4px;")
+        header_label.setStyleSheet("margin-bottom: 4px;")
         layout.addWidget(header_label)
-        
+
         desc_label = QLabel(f"{len(self.schedule.unscheduled_entries)} item(s) could not be automatically scheduled. Manually assign an income date to each item:")
         desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("color: #bdc3c7; font-size: 11px; margin-bottom: 8px;")
+        desc_label.setStyleSheet("font-size: 13px; margin-bottom: 8px;")
         layout.addWidget(desc_label)
         
         # Scrollable area for items
@@ -1230,11 +1468,11 @@ class Calendar(QWidget):
             item_layout.setContentsMargins(0, 0, 0, 0)
             
             # Item info
-            info_label = QLabel(f"💸 {entry.name} - {self.format_currency(entry.amount)} (Due: {entry.due_date.strftime('%Y-%m-%d')})")
+            info_label = QLabel(f"{entry.name} - {self.format_currency(entry.amount)} (Due: {entry.due_date.strftime('%Y-%m-%d')})")
             info_label.setMinimumWidth(320)
-            info_label.setStyleSheet("color: #ecf0f1; font-size: 11px; font-weight: 500;")
+            info_label.setStyleSheet("font-size: 13px; font-weight: 500;")
             item_layout.addWidget(info_label)
-            
+
             # Income date picker
             income_date_combo = QComboBox()
             income_date_combo.addItem("-- Select Income Date --", None)
@@ -1243,35 +1481,8 @@ class Calendar(QWidget):
                     income_date.strftime("%Y-%m-%d"),
                     income_date
                 )
-            income_date_combo.setStyleSheet("""
-                QComboBox {
-                    padding: 6px;
-                    border: 1px solid #4a5f7f;
-                    border-radius: 4px;
-                    background-color: #34495e;
-                    color: #ecf0f1;
-                    font-size: 11px;
-                    min-width: 140px;
-                }
-                QComboBox::drop-down {
-                    border: none;
-                    width: 20px;
-                }
-                QComboBox::down-arrow {
-                    image: none;
-                    border-left: 4px solid transparent;
-                    border-right: 4px solid transparent;
-                    border-top: 5px solid #ecf0f1;
-                    margin-right: 5px;
-                }
-                QComboBox QAbstractItemView {
-                    background-color: #2c3e50;
-                    color: #ecf0f1;
-                    selection-background-color: #3498db;
-                    selection-color: white;
-                    border: 1px solid #4a5f7f;
-                }
-            """)
+            income_date_combo.setStyleSheet("padding: 10px; font-size: 14px; min-width: 140px;")
+            income_date_combo.setMinimumHeight(40)
             item_layout.addWidget(income_date_combo)
             
             # Store reference
@@ -1289,47 +1500,20 @@ class Calendar(QWidget):
         buttons_layout = QHBoxLayout()
         buttons_layout.addStretch(1)
         
-        cancel_button = QPushButton("❌ Cancel")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet("padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;")
+        cancel_button.setMinimumHeight(40)
         cancel_button.clicked.connect(dialog.reject)
         buttons_layout.addWidget(cancel_button)
-        
-        save_button = QPushButton("✅ Save Assignments")
-        save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #e74c3c;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #c0392b;
-            }
-            QPushButton:pressed {
-                background-color: #a93226;
-            }
-        """)
+
+        save_button = QPushButton("Save Assignments")
+        save_button.setStyleSheet("padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;")
+        save_button.setMinimumHeight(40)
         save_button.clicked.connect(
             lambda: self._save_unscheduled_assignments(assignments, dialog)
         )
         buttons_layout.addWidget(save_button)
-        
+
         layout.addLayout(buttons_layout)
         dialog.setLayout(layout)
         dialog.exec()
@@ -1435,15 +1619,83 @@ class Calendar(QWidget):
     
     def _ask_spending_buffer(self):
         """Dialog to ask for spending buffer amount."""
-        from PyQt6.QtWidgets import QInputDialog
-        return QInputDialog.getDouble(
-            self, "Spending Buffer",
-            "Enter minimum spending buffer amount:",
-            400.0, 0.0, 100000.0, 2
-        )
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Spending Buffer")
+        dialog.setMinimumWidth(400)
+        layout = QVBoxLayout()
+        layout.setSpacing(12)
+        layout.setContentsMargins(20, 20, 20, 16)
+
+        field_label_font = QFont()
+        field_label_font.setPointSize(11)
+        field_label_font.setBold(True)
+
+        prompt_label = QLabel("Enter minimum spending buffer amount:")
+        prompt_label.setFont(field_label_font)
+        layout.addWidget(prompt_label)
+
+        help_label = QLabel("This is the minimum amount to keep available for spending each pay period.")
+        help_label.setWordWrap(True)
+        help_label.setStyleSheet("font-size: 13px; font-style: italic;")
+        layout.addWidget(help_label)
+
+        layout.addSpacing(8)
+
+        amount_input = QLineEdit("400.00")
+        amount_input.setStyleSheet("padding: 10px; font-size: 14px;")
+        amount_input.setMinimumHeight(40)
+        layout.addWidget(amount_input)
+
+        layout.addStretch(1)
+
+        button_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+        buttons_layout = QHBoxLayout()
+        buttons_layout.addStretch(1)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet(button_style)
+        cancel_button.setMinimumHeight(40)
+        cancel_button.clicked.connect(dialog.reject)
+        buttons_layout.addWidget(cancel_button)
+
+        ok_button = QPushButton("OK")
+        ok_button.setStyleSheet(button_style)
+        ok_button.setMinimumHeight(40)
+        ok_button.clicked.connect(dialog.accept)
+        buttons_layout.addWidget(ok_button)
+
+        layout.addLayout(buttons_layout)
+        dialog.setLayout(layout)
+
+        result = dialog.exec()
+        if result == QDialog.DialogCode.Accepted:
+            try:
+                return float(amount_input.text()), True
+            except ValueError:
+                return 400.0, True
+        return 0.0, False
 
     def extrapolate_budget(self, vertical_layout):
         """Run extrapolation using service (same logic as API!)."""
+        confirm = QMessageBox.question(
+            self,
+            "Run Budget Extrapolation?",
+            "Extrapolation schedules your recurring budget items across the date range "
+            "you've selected. Here's how it works:\n\n"
+            "\u2022 Your income items become columns in the schedule \u2014 one column per payday\n"
+            "\u2022 Expenses are placed into the earliest column that can cover them\n"
+            "\u2022 If an expense can't fit anywhere, it's marked as unscheduled for you to handle manually\n"
+            "\u2022 Items you've already marked as paid are preserved\n\n"
+            "After extrapolation, take a moment to review the results. The scheduling "
+            "algorithm does its best, but you know your finances better than any algorithm.\n\n"
+            "Once your schedule looks right, consider adding savings items to start "
+            "building a safety net \u2014 even small amounts add up.\n\n"
+            "You've got this!",
+            QMessageBox.StandardButton.Ok | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Ok
+        )
+        if confirm != QMessageBox.StandardButton.Ok:
+            return
         try:
             # Get date range from UI date pickers
             start_date = self.extrapolation_start_date.date().toPyDate()
@@ -1481,6 +1733,8 @@ class Calendar(QWidget):
             traceback.print_exc()  # Print full traceback to console for debugging
             QMessageBox.critical(self, "Error", f"Extrapolation failed:\n{str(e)}\n\nCheck console for details.")
     
+
+
     def _refresh_schedule(self):
         """Refresh the schedule display."""
         self.schedule.fetch_schedule(self.db, self.selected_profile.id)
@@ -1494,7 +1748,7 @@ class Calendar(QWidget):
         visible_income_dates = []
         for income_date in self.schedule.sorted_income_dates:
             # Skip dates that are hidden (before or equal to hidden_through)
-            if self.selected_profile.hidden_through:
+            if not self.show_all_columns and self.selected_profile.hidden_through:
                 hidden_date = date.fromisoformat(self.selected_profile.hidden_through) if isinstance(self.selected_profile.hidden_through, str) else self.selected_profile.hidden_through
                 if income_date <= hidden_date:
                     continue  # Skip this column
@@ -1510,7 +1764,36 @@ class Calendar(QWidget):
 
         self.schedule_widget = QTableWidget()
         self.schedule_widget.setColumnCount(len(visible_income_dates))
-        self.schedule_widget.setHorizontalHeaderLabels(date_strings)
+
+        # Determine which column contains "today" for the today-indicator
+        today = date.today()
+        today_col_idx = None
+        if visible_income_dates:
+            # Find the last income_date that is <= today
+            for i, inc_date in enumerate(visible_income_dates):
+                if inc_date <= today:
+                    today_col_idx = i
+            # If today is before all dates, highlight the first column
+            if today_col_idx is None:
+                today_col_idx = 0
+
+        # Set column headers, marking "today" column with a prefix
+        header_labels = []
+        for i, ds in enumerate(date_strings):
+            if i == today_col_idx:
+                header_labels.append(f"\u25b8 {ds}")
+            else:
+                header_labels.append(ds)
+        self.schedule_widget.setHorizontalHeaderLabels(header_labels)
+
+        # Bold the "today" column header
+        if today_col_idx is not None:
+            header_item = self.schedule_widget.horizontalHeaderItem(today_col_idx)
+            if header_item:
+                bold_font = QFont()
+                bold_font.setBold(True)
+                header_item.setFont(bold_font)
+
         # Set fixed column width instead of stretch to prevent super-wide columns
         self.schedule_widget.horizontalHeader().setSectionResizeMode(
             QHeaderView.ResizeMode.Fixed
@@ -1519,10 +1802,14 @@ class Calendar(QWidget):
         for i in range(len(visible_income_dates)):
             self.schedule_widget.setColumnWidth(i, 120)
         self.schedule_widget.horizontalHeader().setStretchLastSection(False)
-        # row for each expense plus one for income, a subtotal, and a leftover, and carryover
-        self.schedule_widget.setRowCount(len(self.schedule.expense_budget_items) + 4)
+        # rows: carryover + each income + each expense + subtotal + leftover + safe-to-spend
+        self.schedule_widget.setRowCount(
+            1 + len(self.schedule.income_budget_items) + len(self.schedule.expense_budget_items) + 3
+        )
         self.schedule_widget.itemClicked.connect(self.cell_clicked)
-        
+        self.schedule_widget.cellDoubleClicked.connect(self._quick_mark_paid)
+        # Context menu removed — use the cell detail dialog for Move/Split per-item
+
         # Remove dark background - let theme handle it
         self.schedule_widget.setStyleSheet("""
             QTableWidget {
@@ -1556,11 +1843,11 @@ class Calendar(QWidget):
             cidx += 1
         idx += 1
 
-        # Render income row, just one for now
-        for budget_items in self.schedule.income_budget_items:
+        # Render income rows (one per income budget item)
+        for budget_item in self.schedule.income_budget_items:
             cidx = 0
             self.schedule_widget.setVerticalHeaderItem(
-                idx, QTableWidgetItem(budget_items.name)
+                idx, QTableWidgetItem(budget_item.name)
             )
 
             for income_date in visible_income_dates:
@@ -1574,32 +1861,29 @@ class Calendar(QWidget):
                     cidx += 1
                     continue
 
-                if idx == 1:
-                    # Handle all income entries in the column
-                    if len(schedule_column.incomes) > 0:
-                        # Calculate total from all income entries
-                        total_income = sum(income.total() for income in schedule_column.incomes)
-                        all_incomes_paid = all(income.all_paid() for income in schedule_column.incomes)
-                        
-                        # Store the first income entry for reference (or could store all)
-                        self.grid_entries[(idx, cidx)] = schedule_column.incomes[0]
-                        
-                        self.schedule_widget.setItem(
-                            idx,
-                            cidx,
-                            self.create_cell(
-                                income_date,
-                                total_income,
-                                True,
-                                True,
-                                all_incomes_paid,
-                            ),
-                        )
-                    else:
-                        self.schedule_widget.setItem(
-                            idx, cidx, self.create_cell(income_date, None)
-                        )
-                    cidx += 1
+                # Find matching income entry for this budget item
+                matching = next(
+                    (e for e in schedule_column.incomes if e.budget_item.id == budget_item.id),
+                    None,
+                )
+                if matching is not None:
+                    self.grid_entries[(idx, cidx)] = matching
+                    self.schedule_widget.setItem(
+                        idx,
+                        cidx,
+                        self.create_cell(
+                            income_date,
+                            matching.total(),
+                            True,
+                            True,
+                            matching.all_paid(),
+                        ),
+                    )
+                else:
+                    self.schedule_widget.setItem(
+                        idx, cidx, self.create_cell(income_date, None)
+                    )
+                cidx += 1
             idx += 1
 
         # Render expense rows
@@ -1616,7 +1900,7 @@ class Calendar(QWidget):
                 )
                 if schedule_column is None:
                     self.schedule_widget.setItem(
-                        idx, cidx, self.create_cell(income_date, None)
+                        idx, cidx, self.create_cell(income_date, None, empty=True)
                     )
                     cidx += 1
                     continue
@@ -1629,24 +1913,29 @@ class Calendar(QWidget):
                     ),
                     None,
                 )
-                if income_date.strftime("%Y-%m-%d") == '2025-07-01' and budget_item.name == 'Gas' and matching is not None:
-                    print("\tDEBUG: Found Gas entry", matching.all_paid())
                 if matching is not None:
                     self.grid_entries[(idx, cidx)] = matching
-                    self.schedule_widget.setItem(
-                        idx,
-                        cidx,
-                        self.create_cell(
-                            income_date,
-                            matching.total(),
-                            False,
-                            False,
-                            matching.all_paid(),
-                        ),
+                    cell_item = self.create_cell(
+                        income_date,
+                        matching.total(),
+                        False,
+                        False,
+                        matching.all_paid(),
                     )
+                    # Overdue highlighting: red tint for unpaid expenses past their income date
+                    if income_date < date.today() and not matching.all_paid():
+                        overdue_bg = QColor("#4a1a1a") if self.is_dark_mode() else QColor("#ffcdd2")
+                        cell_item.setBackground(QBrush(overdue_bg))
+                        if self.is_dark_mode():
+                            cell_item.setForeground(QBrush(QColor("#ff8a80")))
+                    cell_item.setData(Qt.ItemDataRole.UserRole, {
+                        'budget_item_id': budget_item.id,
+                        'income_date': income_date.strftime("%Y-%m-%d"),
+                    })
+                    self.schedule_widget.setItem(idx, cidx, cell_item)
                 else:
                     self.schedule_widget.setItem(
-                        idx, cidx, self.create_cell(income_date, None)
+                        idx, cidx, self.create_cell(income_date, None, empty=True)
                     )
                 cidx += 1
             idx += 1
@@ -1684,4 +1973,28 @@ class Calendar(QWidget):
             cidx += 1
         idx += 1
 
+        # Render safe to spend row
+        self.schedule_widget.setVerticalHeaderItem(idx, QTableWidgetItem("Safe to Spend"))
+        cidx = 0
+        for income_date in visible_income_dates:
+            schedule_column = self.schedule.columns.get(
+                income_date.strftime("%Y-%m-%d"), None
+            )
+            if schedule_column is not None:
+                safe = schedule_column.income_total() + schedule_column.expenses_total()
+                cell = self.create_cell(income_date, safe, True, True)
+                safe_color = QColor("#4caf50") if safe >= 0 else QColor("#ef5350")
+                cell.setForeground(QBrush(safe_color))
+                self.schedule_widget.setItem(idx, cidx, cell)
+            cidx += 1
+        idx += 1
+
         vertical_layout.addWidget(self.schedule_widget)
+
+        # Auto-scroll to the "today" column
+        if today_col_idx is not None and self.schedule_widget.rowCount() > 0:
+            target_item = self.schedule_widget.item(0, today_col_idx)
+            if target_item:
+                self.schedule_widget.scrollToItem(
+                    target_item, QTableWidget.ScrollHint.PositionAtCenter
+                )

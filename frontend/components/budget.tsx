@@ -8,6 +8,7 @@ import { api } from './renderUtils';
 import BudgetTable from './budget-table';
 import BudgetCards from './budget-cards';
 import BudgetChart from './budget-chart';
+import HelpIcon from './help-icon';
 import { fetchProfile, useStore } from '../store';
 
 export default function Budget() {
@@ -38,6 +39,7 @@ export default function Budget() {
             }}>
                 <Typography variant="h4" sx={{ fontWeight: 'bold', m: 0 }}>
                     💰 Budget Items
+                    <HelpIcon text="Define recurring income and expenses with schedules. These get projected onto your calendar." />
                 </Typography>
                 <Link to="/budget/new" style={{ textDecoration: 'none' }}>
                     <Button
@@ -60,9 +62,24 @@ export default function Budget() {
                     <Alert severity="error" sx={{ mb: 2 }}>{budgetTableError}</Alert>
                 )}
 
-                {view === 'list' && (<BudgetTable removeBudgetItem={removeBudgetItem} />)}
-                {view === 'cards' && (<BudgetCards removeBudgetItem={removeBudgetItem} />)}
-                {view === 'chart' && (<BudgetChart />)}
+                {profile?.budget_items?.length === 0 ? (
+                    <Box sx={{ textAlign: 'center', py: 5 }}>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                            No budget items yet
+                        </Typography>
+                        <Typography sx={{ color: '#90a4ae', maxWidth: 500, mx: 'auto', lineHeight: 1.8 }}>
+                            Budget items are your recurring income and expenses — rent, salary, subscriptions, etc.
+                            Each item has a schedule that tells Budgie when it occurs.
+                            Click 'Add Budget Item' above to get started, then run Extrapolation from the Calendar to see them on your schedule.
+                        </Typography>
+                    </Box>
+                ) : (
+                    <>
+                        {view === 'list' && (<BudgetTable removeBudgetItem={removeBudgetItem} />)}
+                        {view === 'cards' && (<BudgetCards removeBudgetItem={removeBudgetItem} />)}
+                        {view === 'chart' && (<BudgetChart />)}
+                    </>
+                )}
             </Box>
         </Paper>
     );

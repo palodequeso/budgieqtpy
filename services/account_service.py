@@ -45,8 +45,7 @@ class AccountService:
     
     def delete_account(self, account_id: int) -> None:
         """Delete an account."""
-        # TODO: Implement delete_account in database
-        raise NotImplementedError("Account deletion not yet implemented")
+        self.db.delete_account(account_id)
     
     def get_account_balance(self, account_id: int) -> float:
         """

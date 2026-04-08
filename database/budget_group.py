@@ -15,8 +15,7 @@ class BudgetGroup:
         db.commit()
         self.id = cursor.lastrowid
 
-    staticmethod
-
+    @staticmethod
     def fetch_all(db, profile_id):
         cursor = db.cursor()
         cursor.execute(
@@ -28,8 +27,7 @@ class BudgetGroup:
             output.append(BudgetGroup(row[0], row[1]))
         return output
 
-    staticmethod
-
+    @staticmethod
     def create_table(db):
         cursor = db.cursor()
         cursor.execute(

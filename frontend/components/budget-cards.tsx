@@ -44,7 +44,6 @@ export default function BudgetCards({ removeBudgetItem }) {
             height: Math.max(10, Math.sqrt(b.percentage * 100 * SCALE_CONST)) + MARGIN_CONST,
         }));
         packer.fit(blocks);
-        console.log('blocks positioned', blocks);
         if (expensesOverlap) {
             const incomeBlocks = budget.filter((b) => b.type === 'income').map((b) => ({
                 ...b,

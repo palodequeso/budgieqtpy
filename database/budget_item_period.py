@@ -51,8 +51,7 @@ class BudgetItemPeriod:
         self.created_at = datetime_now
         self.updated_at = datetime_now
 
-    staticmethod
-
+    @staticmethod
     def fetch_by_budget_item(db, budget_item_id):
         cursor = db.cursor()
         cursor.execute(
@@ -75,8 +74,7 @@ class BudgetItemPeriod:
             )
         return output
 
-    staticmethod
-
+    @staticmethod
     def create_table(db):
         cursor = db.cursor()
         cursor.execute(

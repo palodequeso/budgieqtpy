@@ -85,7 +85,7 @@ export type PeriodItem = {
 export default function BudgetItem({ budgetItemId = '' }) {
     const theme = useTheme();
     const params = useParams();
-    // const navigate = useNavigate();
+    const navigate = useNavigate();
     const profile = useStore((state) => (state as any).profile);
     const budget = useStore((state) => (state as any).budget);
     const previousBudgetItemGroupNames = useStore((state) => (state as any).budgetGroups || []);
@@ -93,8 +93,6 @@ export default function BudgetItem({ budgetItemId = '' }) {
     if (params.budgetItemId) {
         budgetItemId = params.budgetItemId;
     }
-    console.log('budgetItemId', budgetItemId);
-    console.log('profile.budget', budget);
     const [budgetItem, setBudgetItem] = React.useState<any>(
         budget.find((budgetItem) => budgetItem.id === parseInt(budgetItemId)),
     );
@@ -121,6 +119,15 @@ export default function BudgetItem({ budgetItemId = '' }) {
         budgetItem?.periods || [],
     );
     const [newBudgetItemGroupName, setNewBudgetItemGroupName] = React.useState<string>('');
+    const [budgetItemDebtId, setBudgetItemDebtId] = React.useState<number | ''>(budgetItem?.debt_id ?? '');
+    const [debts, setDebts] = React.useState<any[]>([]);
+    const [budgetItemSuccess, setBudgetItemSuccess] = React.useState('');
+
+    React.useEffect(() => {
+        if (profile?.id) {
+            api.get('/debts/' + profile.id).then((data: any) => setDebts(data || [])).catch(() => setDebts([]));
+        }
+    }, [profile?.id]);
 
     const addBudgetItem = async () => {
         try {
@@ -132,15 +139,16 @@ export default function BudgetItem({ budgetItemId = '' }) {
                 endDate: noEndDate ? new Date('2999-12-31') : (budgetItemEndDate || new Date()),
                 group: budgetItemGroup.id,
                 periods,
+                debt_id: budgetItemDebtId || null,
             };
             if (budgetItem?.id) {
                 await api.put(`/budget/${profile.id}/${budgetItem.id}`, data);
             } else {
                 await api.post(`/budget/${profile.id}`, data);
             }
-            fetchProfile(profile.id);
-            // location.pathname = '#/budget';
-            // navigate('/budget');
+            setBudgetItemSuccess(budgetItem?.id ? 'Budget item updated!' : 'Budget item created!');
+            await fetchProfile(profile.id);
+            setTimeout(() => navigate('/budget'), 500);
         } catch (err) {
             setBudgetItemError(err.message);
         }
@@ -151,11 +159,13 @@ export default function BudgetItem({ budgetItemId = '' }) {
             return;
         }
 
-        await api.post(`/budget/group/${profile.id}`, { name: newBudgetItemGroupName });
-
-        // setPreviousBudgetItemGroupNames([...previousBudgetItemGroupNames, newBudgetItemGroupName]);
-        setNewBudgetItemGroupName('');
-        fetchProfile(profile.id);
+        try {
+            await api.post(`/budget/group/${profile.id}`, { name: newBudgetItemGroupName });
+            setNewBudgetItemGroupName('');
+            fetchProfile(profile.id);
+        } catch (err) {
+            setBudgetItemError(err.message);
+        }
     }
 
     return (
@@ -191,6 +201,9 @@ export default function BudgetItem({ budgetItemId = '' }) {
             <Box sx={{ p: 3 }}>
                 {budgetItemError && (
                     <Alert severity="error" sx={{ mb: 3 }}>{budgetItemError}</Alert>
+                )}
+                {budgetItemSuccess && (
+                    <Alert severity="success" sx={{ mb: 3 }}>{budgetItemSuccess}</Alert>
                 )}
                 
                 <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -301,6 +314,38 @@ export default function BudgetItem({ budgetItemId = '' }) {
                                 </Box>
                             </Box>
                         </Grid>
+                        {/* Linked Debt Section */}
+                        {debts.length > 0 && (
+                        <Grid size={12}>
+                            <Box sx={{
+                                backgroundColor: theme.palette.mode === 'dark' ? '#37474f' : '#f5f5f5',
+                                borderRadius: '8px',
+                                padding: '20px',
+                            }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold', mb: 1 }}>
+                                    Linked Debt (Optional)
+                                </Typography>
+                                <Typography sx={{ color: '#b0bec5', fontSize: 11, fontStyle: 'italic', mb: 2 }}>
+                                    Link this budget item to a debt for automatic payment capping based on remaining balance.
+                                </Typography>
+                                <Select
+                                    id="budget-item-debt-id"
+                                    value={budgetItemDebtId}
+                                    onChange={(e) => setBudgetItemDebtId(e.target.value as number | '')}
+                                    fullWidth
+                                    size="small"
+                                    displayEmpty
+                                >
+                                    <MenuItem value="">None</MenuItem>
+                                    {debts.map((debt) => (
+                                        <MenuItem key={debt.id} value={debt.id}>
+                                            {debt.name} (${parseFloat(debt.remaining_amount).toFixed(2)} remaining)
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </Box>
+                        </Grid>
+                        )}
                         {/* Active Period Section */}
                         <Grid size={12}>
                             <Box sx={{
@@ -315,19 +360,18 @@ export default function BudgetItem({ budgetItemId = '' }) {
                                     When should this item be active? For ongoing items, check 'No end date'.
                                 </Typography>
                                 
-                                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                                    <Box sx={{ flex: 1 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box>
                                         <Typography sx={{ color: '#90a4ae', fontSize: 12, fontWeight: 'bold', mb: 1 }}>
                                             Start Date
                                         </Typography>
                                         <DesktopDatePicker
-                                            label="Start Date"
                                             value={budgetItemStartDate ?? new Date()}
                                             onChange={(value) => setBudgetItemStartDate(value as Date)}
-                                            slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                                            slotProps={{ textField: { fullWidth: true } }}
                                         />
                                     </Box>
-                                    <Box sx={{ flex: 1 }}>
+                                    <Box>
                                         <Typography sx={{ color: '#90a4ae', fontSize: 12, fontWeight: 'bold', mb: 1 }}>
                                             End Date
                                         </Typography>
@@ -343,11 +387,10 @@ export default function BudgetItem({ budgetItemId = '' }) {
                                             sx={{ color: '#b0bec5', fontSize: 12, mb: 1 }}
                                         />
                                         <DesktopDatePicker
-                                            label="End Date"
                                             value={budgetItemEndDate ?? new Date(new Date().setFullYear(new Date().getFullYear() + 1))}
                                             onChange={(value) => setBudgetItemEndDate(value as Date)}
                                             disabled={noEndDate}
-                                            slotProps={{ textField: { fullWidth: true, size: 'small' } }}
+                                            slotProps={{ textField: { fullWidth: true } }}
                                         />
                                     </Box>
                                 </Box>

@@ -48,6 +48,7 @@ export default function Account({ accountId = '' }) {
     const [nameError, setNameError] = React.useState(false);
     const [balanceError, setBalanceError] = React.useState(false);
     const [error, setError] = React.useState('');
+    const [success, setSuccess] = React.useState('');
 
     // Update account when profile changes (e.g., after fetching ledger entries)
     React.useEffect(() => {
@@ -55,14 +56,10 @@ export default function Account({ accountId = '' }) {
             (acc) => acc.id === parseInt(accountId as string),
         );
         if (updatedAccount) {
-            console.log('Updated account:', updatedAccount);
-            console.log('Account type from API:', updatedAccount.type);
-            console.log('Account ledger:', updatedAccount.ledger);
             setAccount(updatedAccount);
             setAccountName(updatedAccount.name || '');
             // Normalize account type to lowercase to match dropdown values
             const normalizedType = (updatedAccount.type || 'checking').toLowerCase();
-            console.log('Normalized account type:', normalizedType);
             setAccountType(normalizedType);
             setAccountBalance(updatedAccount.balance || 0);
         }
@@ -106,10 +103,9 @@ export default function Account({ accountId = '' }) {
                 json = await api.post(`/accounts/${profile.id}`, bodyData);
                 setAccount(json);
             }
-            // location.pathname = '#/accounts';
+            setSuccess(account?.id ? 'Account updated!' : 'Account created!');
             fetchProfile(profile.id);
-            navigate('/accounts');
-            // notify profile
+            setTimeout(() => navigate('/accounts'), 500);
         } catch (err) {
             setError(err.message);
         }
@@ -167,19 +163,17 @@ export default function Account({ accountId = '' }) {
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
                 )}
+                {success && (
+                    <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>
+                )}
 
-                {/* Account form controls in horizontal layout */}
-                <Box sx={{ 
-                    display: 'flex', 
-                    gap: 2, 
-                    alignItems: 'flex-end',
-                    flexWrap: 'wrap'
-                }}>
-                    <Box sx={{ flex: 1, minWidth: 200 }}>
-                        <InputLabel htmlFor="new-account-name" sx={{ 
-                            color: theme.palette.mode === 'dark' ? '#90a4ae' : '#546e7a', 
+                {/* Account form controls */}
+                <Box sx={{ maxWidth: 480, display: 'flex', flexDirection: 'column', gap: 2.5, mt: 1 }}>
+                    <Box>
+                        <InputLabel htmlFor="new-account-name" sx={{
+                            color: theme.palette.mode === 'dark' ? '#90a4ae' : '#546e7a',
                             mb: 1,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: 'bold'
                         }}>
                             Account Name
@@ -190,19 +184,19 @@ export default function Account({ accountId = '' }) {
                             type="text"
                             required
                             fullWidth
-                            size="small"
                             error={nameError}
                             variant="outlined"
+                            placeholder="e.g., My Checking Account"
                             onChange={(e) => setAccountName(e.target.value)}
                             value={accountName}
                             inputProps={{ 'aria-label': 'account name' }}
                         />
                     </Box>
-                    <Box sx={{ minWidth: 180 }}>
-                        <InputLabel htmlFor="new-account-type" sx={{ 
-                            color: theme.palette.mode === 'dark' ? '#90a4ae' : '#546e7a', 
+                    <Box>
+                        <InputLabel htmlFor="new-account-type" sx={{
+                            color: theme.palette.mode === 'dark' ? '#90a4ae' : '#546e7a',
                             mb: 1,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: 'bold'
                         }}>
                             Account Type
@@ -212,7 +206,6 @@ export default function Account({ accountId = '' }) {
                             type="text"
                             required
                             fullWidth
-                            size="small"
                             variant="outlined"
                             value={accountType}
                             onChange={(e) => setAccountType(e.target.value)}
@@ -225,21 +218,20 @@ export default function Account({ accountId = '' }) {
                             <MenuItem value="investment">Investment</MenuItem>
                         </Select>
                     </Box>
-                    <Box sx={{ minWidth: 180 }}>
-                        <InputLabel htmlFor="new-account-balance" sx={{ 
-                            color: theme.palette.mode === 'dark' ? '#90a4ae' : '#546e7a', 
+                    <Box>
+                        <InputLabel htmlFor="new-account-balance" sx={{
+                            color: theme.palette.mode === 'dark' ? '#90a4ae' : '#546e7a',
                             mb: 1,
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: 'bold'
                         }}>
-                            Account Balance
+                            Starting Balance
                         </InputLabel>
                         <OutlinedInput
                             id="new-account-balance"
                             type="number"
                             required
                             fullWidth
-                            size="small"
                             error={balanceError}
                             inputProps={{ 'aria-label': 'account balance' }}
                             startAdornment={
@@ -253,14 +245,16 @@ export default function Account({ accountId = '' }) {
                             }
                         />
                     </Box>
-                    <Button 
-                        variant="contained" 
-                        color="primary" 
+                    <Button
+                        variant="contained"
+                        color="primary"
                         onClick={save}
-                        sx={{ 
+                        sx={{
                             fontWeight: 'bold',
-                            px: 3,
-                            py: 1
+                            px: 4,
+                            py: 1.5,
+                            alignSelf: 'flex-start',
+                            fontSize: '1rem',
                         }}
                     >
                         💾 Save Account
@@ -337,7 +331,7 @@ export default function Account({ accountId = '' }) {
                             textAlign: 'center'
                         }}>
                             <Typography sx={{ color: '#90a4ae' }}>
-                                No ledger entries yet. Add one to get started!
+                                No ledger entries yet. Ledger entries are individual transactions — payments, deposits, refunds. Add one here, or mark items as paid from the Calendar.
                             </Typography>
                         </Box>
                     )}

@@ -1,4 +1,5 @@
 import {
+    Alert,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -26,22 +27,23 @@ export default function CalendarOneOff({ sortedIncomeDates, open, profile, close
     const [type, setType] = React.useState('expense');
     const [addingOneOffExpensePaid, setAddingOneOffExpensePaid] =
         React.useState(false);
+    const [saveError, setSaveError] = React.useState('');
 
     async function save() {
-        // no matter what need to save extrapolation item I think?
-        // YES, need to be able to plan an unpaid expense
-        const oneOffData = {
-            account,
-            amount,
-            name,
-            incomeDate,
-            type,
-            addingOneOffExpensePaid,
-        };
-        console.log('oneOffData', oneOffData);
-        const result = await api.post(`/calendar/${profile.id}/oneoff`, oneOffData);
-        console.log('result', result);
-        close(true);
+        try {
+            const oneOffData = {
+                account,
+                amount,
+                name,
+                incomeDate,
+                type,
+                addingOneOffExpensePaid,
+            };
+            await api.post(`/calendar/${profile.id}/oneoff`, oneOffData);
+            close(true);
+        } catch (err) {
+            setSaveError(err.message);
+        }
     }
 
     return (
@@ -50,6 +52,7 @@ export default function CalendarOneOff({ sortedIncomeDates, open, profile, close
             <DialogContent>
                 <Paper>
                     <h4>Add Extrapolation/Budget Item</h4>
+                    {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
                     <Grid container spacing={2}>
                         <Grid size={12}>
                             <TextField

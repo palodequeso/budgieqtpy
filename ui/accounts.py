@@ -1,4 +1,3 @@
-import locale
 from PyQt6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
@@ -17,17 +16,12 @@ from PyQt6.QtWidgets import (
     QFrame,
 )
 from PyQt6.QtCore import QDate, Qt
-from PyQt6.QtGui import QPalette, QColor, QFont
+from PyQt6.QtGui import QFont
 from database.account import Account
 from database.database import Database
 from database.ledger_entry import LedgerEntry
 from database.profile import Profile
-
-ACCOUNT_COLORS = {
-    "Checking": "#b2dfdb",
-    "Savings": "#b3e5fc",
-    "Credit Card": "#ffcdd2",
-}
+from ui.onboarding import HelpIcon, HELP_TEXTS
 
 
 class Accounts(QStackedWidget):
@@ -50,21 +44,18 @@ class Accounts(QStackedWidget):
         
         # Determine icon and color based on account type
         account_icons = {
-            "Checking": "💳",
-            "Savings": "🏦",
-            "Credit Card": "💎"
+            "Checking": "[C]",
+            "Savings": "[S]",
+            "Credit Card": "[CC]"
         }
-        icon = account_icons.get(account.account_type, "💰")
-        
-        widget.setStyleSheet(f"""
-            QWidget {{
+        icon = account_icons.get(account.account_type, "[A]")
+
+        widget.setStyleSheet("""
+            QWidget {
                 border: 2px solid;
                 border-radius: 10px;
                 padding: 15px;
-            }}
-            QWidget:hover {{
-                border-color: #1976d2;
-            }}
+            }
         """)
         widget.setMinimumWidth(280)
         widget.setMinimumHeight(200)
@@ -93,7 +84,7 @@ class Accounts(QStackedWidget):
         # Divider
         divider = QFrame()
         divider.setFrameShape(QFrame.Shape.HLine)
-        divider.setStyleSheet("")
+        divider.setStyleSheet("border: none;")
         vl.addWidget(divider)
 
         # Account type
@@ -116,12 +107,12 @@ class Accounts(QStackedWidget):
         balance_font.setPointSize(16)
         balance_font.setBold(True)
         balance_label.setFont(balance_font)
-        balance_label.setStyleSheet("color: #4caf50; margin: 2px 0 5px 0;")
+        balance_label.setStyleSheet("color: #27ae60; margin: 2px 0 5px 0;")
         vl.addWidget(balance_label)
         
         # Ledger entry count
         entry_count = QLabel(f"{len(ledger_entries)} ledger entries")
-        entry_count.setStyleSheet("color: #b0bec5; font-size: 11px;")
+        entry_count.setStyleSheet("font-size: 11px;")
         vl.addWidget(entry_count)
 
         vl.addStretch(1)
@@ -130,19 +121,11 @@ class Accounts(QStackedWidget):
         edit_button = QPushButton("View Details")
         edit_button.setStyleSheet("""
             QPushButton {
-                background-color: #1976d2;
-                color: white;
                 padding: 8px 16px;
-                border: none;
+                border: 1px solid #546e7a;
                 border-radius: 5px;
                 font-weight: bold;
                 font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-            QPushButton:pressed {
-                background-color: #0d47a1;
             }
         """)
         edit_button.clicked.connect(
@@ -165,24 +148,19 @@ class Accounts(QStackedWidget):
 
         # Header section with back button and title
         header_container = QWidget()
-        header_container.setStyleSheet("border-radius: 8px; padding: 15px;")
+        header_container.setStyleSheet("padding: 15px;")
         header_layout = QVBoxLayout()
         header_layout.setSpacing(10)
         
         # Back button row
         back_row = QHBoxLayout()
-        back_button = QPushButton("⬅️ Back to Accounts")
+        back_button = QPushButton("Back to Accounts")
         back_button.setStyleSheet("""
             QPushButton {
-                background-color: #546e7a;
-                color: white;
                 padding: 8px 16px;
-                border: none;
+                border: 1px solid #546e7a;
                 border-radius: 5px;
                 font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #607d8b;
             }
         """)
         back_button.clicked.connect(lambda: self.setCurrentIndex(0))
@@ -192,11 +170,11 @@ class Accounts(QStackedWidget):
         
         # Account icon and name
         account_icons = {
-            "Checking": "💳",
-            "Savings": "🏦",
-            "Credit Card": "💎"
+            "Checking": "[C]",
+            "Savings": "[S]",
+            "Credit Card": "[CC]"
         }
-        icon = account_icons.get(account.account_type, "💰")
+        icon = account_icons.get(account.account_type, "[A]")
         
         title_row = QHBoxLayout()
         icon_label = QLabel(icon)
@@ -219,7 +197,7 @@ class Accounts(QStackedWidget):
 
         # Account info section
         info_container = QWidget()
-        info_container.setStyleSheet("border-radius: 8px; padding: 20px;")
+        info_container.setStyleSheet("padding: 20px;")
         info_layout = QHBoxLayout()
         info_layout.setSpacing(30)
         
@@ -250,7 +228,7 @@ class Accounts(QStackedWidget):
         balance_font.setPointSize(18)
         balance_font.setBold(True)
         balance_label.setFont(balance_font)
-        balance_label.setStyleSheet("color: #4caf50;")
+        balance_label.setStyleSheet("color: #27ae60;")
         balance_col.addWidget(balance_label)
         info_layout.addLayout(balance_col)
         
@@ -269,22 +247,14 @@ class Accounts(QStackedWidget):
         info_layout.addStretch(1)
         
         # Add Ledger Entry button
-        add_ledger_entry_button = QPushButton("➕ Add Ledger Entry")
+        add_ledger_entry_button = QPushButton("Add Ledger Entry")
         add_ledger_entry_button.setStyleSheet("""
             QPushButton {
-                background-color: #1976d2;
-                color: white;
                 padding: 10px 20px;
-                border: none;
+                border: 1px solid #546e7a;
                 border-radius: 5px;
                 font-size: 13px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-            QPushButton:pressed {
-                background-color: #0d47a1;
             }
         """)
         add_ledger_entry_button.clicked.connect(
@@ -296,7 +266,7 @@ class Accounts(QStackedWidget):
         vl.addWidget(info_container)
 
         # Ledger table section
-        ledger_label = QLabel(f"📊 Ledger Entries ({len(ledger_items)})")
+        ledger_label = QLabel(f"Ledger Entries ({len(ledger_items)})")
         ledger_label_font = QFont()
         ledger_label_font.setPointSize(16)
         ledger_label_font.setBold(True)
@@ -313,18 +283,13 @@ class Accounts(QStackedWidget):
             # Style the table
             ledger_table.setStyleSheet("""
                 QTableWidget {
-                    border: 2px solid;
                     border-radius: 8px;
                 }
                 QTableWidget::item {
                     padding: 8px;
                 }
-                QTableWidget::item:selected {
-                    background-color: #1976d2;
-                }
                 QHeaderView::section {
                     padding: 10px;
-                    border: none;
                     font-weight: bold;
                 }
             """)
@@ -365,18 +330,13 @@ class Accounts(QStackedWidget):
                 )
                 
                 # Add Edit button
-                edit_button = QPushButton("✏️ Edit")
+                edit_button = QPushButton("Edit")
                 edit_button.setStyleSheet("""
                     QPushButton {
-                        background-color: #1976d2;
-                        color: white;
                         padding: 6px 12px;
-                        border: none;
+                        border: 1px solid #546e7a;
                         border-radius: 4px;
                         font-size: 11px;
-                    }
-                    QPushButton:hover {
-                        background-color: #1565c0;
                     }
                 """)
                 edit_button.clicked.connect(
@@ -385,18 +345,13 @@ class Accounts(QStackedWidget):
                 ledger_table.setCellWidget(idx, 8, edit_button)
                 
                 # Add Delete button
-                delete_button = QPushButton("🗑️ Delete")
+                delete_button = QPushButton("Delete")
                 delete_button.setStyleSheet("""
                     QPushButton {
-                        background-color: #d32f2f;
-                        color: white;
                         padding: 6px 12px;
-                        border: none;
+                        border: 1px solid #546e7a;
                         border-radius: 4px;
                         font-size: 11px;
-                    }
-                    QPushButton:hover {
-                        background-color: #b71c1c;
                     }
                 """)
                 delete_button.clicked.connect(
@@ -411,9 +366,14 @@ class Accounts(QStackedWidget):
             vl.addWidget(ledger_table)
         else:
             # No ledger entries message
-            no_entries = QLabel("No ledger entries yet. Add one to get started!")
+            no_entries = QLabel(
+                "No ledger entries yet.\n\n"
+                "Ledger entries are individual transactions — payments, deposits, refunds.\n"
+                "Click 'Add Ledger Entry' above, or mark items as paid from the Calendar."
+            )
             no_entries.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            no_entries.setStyleSheet("font-size: 14px; padding: 40px; border-radius: 8px;")
+            no_entries.setWordWrap(True)
+            no_entries.setStyleSheet("font-size: 13px; padding: 40px;")
             vl.addWidget(no_entries)
 
         self.account_widget.setLayout(vl)
@@ -430,35 +390,28 @@ class Accounts(QStackedWidget):
 
         # Title section
         title_container = QWidget()
-        title_container.setStyleSheet("border-radius: 8px; padding: 15px;")
+        title_container.setStyleSheet("padding: 15px;")
         title_layout = QHBoxLayout()
         title_layout.setContentsMargins(10, 5, 10, 5)
         
-        accounts_title = QLabel("💼 Accounts")
+        accounts_title = QLabel("Accounts")
         accounts_title_font = QFont()
         accounts_title_font.setPointSize(18)
         accounts_title_font.setBold(True)
         accounts_title.setFont(accounts_title_font)
         title_layout.addWidget(accounts_title)
+        title_layout.addWidget(HelpIcon(HELP_TEXTS["accounts"]))
         title_layout.addStretch(1)
         
         # Add Account button in title
-        createButton = QPushButton("➕ Add Account")
+        createButton = QPushButton("Add Account")
         createButton.setStyleSheet("""
             QPushButton {
-                background-color: #1976d2;
-                color: white;
                 padding: 10px 20px;
-                border: none;
+                border: 1px solid #546e7a;
                 border-radius: 5px;
                 font-size: 13px;
                 font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-            QPushButton:pressed {
-                background-color: #0d47a1;
             }
         """)
         createButton.clicked.connect(lambda: self.setCurrentIndex(1))
@@ -485,10 +438,27 @@ class Accounts(QStackedWidget):
             vl.addWidget(accounts_container)
         else:
             # No accounts message
-            no_accounts_label = QLabel("No accounts yet. Click 'Add Account' to create one.")
-            no_accounts_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            no_accounts_label.setStyleSheet("font-size: 14px; padding: 40px;")
-            vl.addWidget(no_accounts_label)
+            no_accounts_container = QWidget()
+            no_accounts_vl = QVBoxLayout()
+            no_accounts_vl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_accounts_title = QLabel("No accounts yet")
+            no_accounts_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            title_font = QFont()
+            title_font.setPointSize(16)
+            title_font.setBold(True)
+            no_accounts_title.setFont(title_font)
+            no_accounts_vl.addWidget(no_accounts_title)
+            no_accounts_desc = QLabel(
+                "Accounts represent your bank accounts — checking, savings, credit cards.\n"
+                "Each account has a ledger that tracks transactions.\n\n"
+                "Click 'Add Account' above to create your first one."
+            )
+            no_accounts_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_accounts_desc.setWordWrap(True)
+            no_accounts_desc.setStyleSheet("font-size: 13px; padding: 20px;")
+            no_accounts_vl.addWidget(no_accounts_desc)
+            no_accounts_container.setLayout(no_accounts_vl)
+            vl.addWidget(no_accounts_container)
 
         vl.addStretch(1)
 
@@ -505,25 +475,19 @@ class Accounts(QStackedWidget):
 
         # Header Section
         header_container = QWidget()
-        header_container.setStyleSheet("border-radius: 8px; padding: 20px;")
+        header_container.setStyleSheet("padding: 20px;")
         header_layout = QVBoxLayout()
         header_layout.setSpacing(15)
         
         # Back button
-        back_button = QPushButton("⬅️ Back to Accounts")
+        back_button = QPushButton("Back to Accounts")
         back_button.setStyleSheet("""
             QPushButton {
-                background-color: transparent;
-                color: white;
                 padding: 8px 16px;
-                border: 2px solid #546e7a;
+                border: 1px solid #546e7a;
                 border-radius: 5px;
                 font-size: 12px;
                 text-align: left;
-            }
-            QPushButton:hover {
-                border-color: #78909c;
-                background-color: rgba(255, 255, 255, 0.08);
             }
         """)
         back_button.clicked.connect(lambda: self.setCurrentIndex(0))
@@ -532,7 +496,7 @@ class Accounts(QStackedWidget):
         
         # Title with icon
         title_row = QHBoxLayout()
-        icon_label = QLabel("💳")
+        icon_label = QLabel("")
         icon_font = QFont()
         icon_font.setPointSize(32)
         icon_label.setFont(icon_font)
@@ -543,151 +507,93 @@ class Accounts(QStackedWidget):
         title_font.setPointSize(20)
         title_font.setBold(True)
         title_label.setFont(title_font)
-        title_label.setStyleSheet("color: white;")
         title_row.addWidget(title_label)
         title_row.addStretch(1)
         header_layout.addLayout(title_row)
         
-        # Form fields in horizontal layout
-        form_layout = QHBoxLayout()
-        form_layout.setSpacing(20)
-        form_layout.setContentsMargins(0, 20, 0, 0)
-        
+        # Form container with constrained width
+        form_container = QWidget()
+        form_container.setMaximumWidth(480)
+        form_layout = QVBoxLayout()
+        form_layout.setSpacing(6)
+        form_layout.setContentsMargins(0, 10, 0, 0)
+
         # Account Name field
-        name_layout = QVBoxLayout()
-        name_layout.setSpacing(6)
-        
         name_label = QLabel("Account Name")
-        name_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        name_layout.addWidget(name_label)
-        
+        name_font = QFont()
+        name_font.setPointSize(11)
+        name_font.setBold(True)
+        name_label.setFont(name_font)
+        form_layout.addWidget(name_label)
+
         name = QLineEdit()
-        name.setPlaceholderText("")
-        name.setStyleSheet("""
-            QLineEdit {
-                padding: 9px 12px;
-                border: 1px solid;
-                border-radius: 4px;
-                font-size: 13px;
-                min-height: 18px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #1976d2;
-            }
-        """)
-        name.setMinimumWidth(400)
-        name.setFixedHeight(38)
-        name_layout.addWidget(name)
-        form_layout.addLayout(name_layout)
-        
+        name.setPlaceholderText("e.g., My Checking Account")
+        name.setStyleSheet("padding: 10px; font-size: 14px;")
+        name.setMinimumHeight(40)
+        form_layout.addWidget(name)
+
+        form_layout.addSpacing(12)
+
         # Account Type field
-        type_layout = QVBoxLayout()
-        type_layout.setSpacing(6)
-        
         type_label = QLabel("Account Type")
-        type_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        type_layout.addWidget(type_label)
-        
+        type_font = QFont()
+        type_font.setPointSize(11)
+        type_font.setBold(True)
+        type_label.setFont(type_font)
+        form_layout.addWidget(type_label)
+
         account_type = QComboBox()
         account_type.addItems(["Checking", "Savings", "Credit Card"])
-        account_type.setFixedHeight(38)
-        account_type.setMinimumWidth(200)
-        type_layout.addWidget(account_type)
-        form_layout.addLayout(type_layout)
-        
+        account_type.setStyleSheet("padding: 8px; font-size: 14px;")
+        account_type.setMinimumHeight(40)
+        form_layout.addWidget(account_type)
+
+        form_layout.addSpacing(12)
+
         # Balance field
-        balance_layout = QVBoxLayout()
-        balance_layout.setSpacing(6)
-        
         balance_label = QLabel("Starting Balance")
-        balance_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        balance_layout.addWidget(balance_label)
-        
-        # Balance input with dollar sign prefix
-        balance_input_container = QWidget()
-        balance_input_layout = QHBoxLayout()
-        balance_input_layout.setSpacing(0)
-        balance_input_layout.setContentsMargins(0, 0, 0, 0)
-        
-        dollar_prefix = QLabel("$")
-        dollar_prefix.setFixedHeight(38)
-        dollar_prefix.setFixedWidth(30)
-        dollar_prefix.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        dollar_prefix.setStyleSheet("""
-            QLabel {
-                font-size: 14px;
-                border: 1px solid;
-                border-right: none;
-                border-radius: 4px 0px 0px 4px;
-                padding: 9px 8px;
-            }
-        """)
-        balance_input_layout.addWidget(dollar_prefix)
-        
+        balance_font = QFont()
+        balance_font.setPointSize(11)
+        balance_font.setBold(True)
+        balance_label.setFont(balance_font)
+        form_layout.addWidget(balance_label)
+
         balance = QLineEdit("0.00")
-        balance.setStyleSheet("""
-            QLineEdit {
-                padding: 9px 12px;
-                border: 1px solid;
-                border-left: none;
-                border-radius: 0px 4px 4px 0px;
-                font-size: 13px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #1976d2;
-                border-left: 1px solid #1976d2;
-            }
-        """)
-        balance.setFixedWidth(185)
-        balance.setFixedHeight(38)
-        balance_input_layout.addWidget(balance)
-        
-        balance_input_container.setLayout(balance_input_layout)
-        balance_layout.addWidget(balance_input_container)
-        form_layout.addLayout(balance_layout)
-        
-        # Save button aligned to bottom
-        button_layout = QVBoxLayout()
-        button_layout.setSpacing(0)
-        # Add spacing to match label height
-        button_spacer = QLabel("")
-        button_spacer.setFixedHeight(17)  # Match label height with spacing
-        button_layout.addWidget(button_spacer)
-        
-        create_button = QPushButton("💾 SAVE ACCOUNT")
+        balance.setStyleSheet("padding: 10px 10px 10px 28px; font-size: 14px;")
+        balance.setMinimumHeight(40)
+        # Overlay a $ label on the left inside the input
+        dollar_overlay = QLabel("$", balance)
+        dollar_overlay.setStyleSheet("font-size: 14px; font-weight: bold; padding-left: 10px; background: transparent; border: none;")
+        dollar_overlay.move(2, 8)
+        form_layout.addWidget(balance)
+
+        form_layout.addSpacing(20)
+
+        # Save button
+        create_button = QPushButton("SAVE ACCOUNT")
         create_button.setStyleSheet("""
             QPushButton {
-                background-color: #1976d2;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
+                padding: 12px 24px;
+                border: 1px solid #546e7a;
+                border-radius: 6px;
+                font-size: 14px;
                 font-weight: bold;
-                text-transform: uppercase;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-            QPushButton:pressed {
-                background-color: #0d47a1;
             }
         """)
-        create_button.setFixedHeight(38)
-        create_button.setFixedWidth(160)
+        create_button.setMinimumHeight(44)
         create_button.clicked.connect(
             lambda: self.create_account(
                 name.text(), account_type.currentText(), balance.text()
             )
         )
-        button_layout.addWidget(create_button)
-        form_layout.addLayout(button_layout)
-        
-        header_layout.addLayout(form_layout)
-        
+        form_layout.addWidget(create_button)
+
+        form_container.setLayout(form_layout)
+        header_layout.addWidget(form_container)
+
         header_container.setLayout(header_layout)
         vl.addWidget(header_container)
-        
+
         vl.addStretch(1)
 
         widget.setLayout(vl)
@@ -699,82 +605,107 @@ class Accounts(QStackedWidget):
         """Open dialog to edit a ledger item."""
         dialog = QDialog(self)
         dialog.setWindowTitle(f"Edit Ledger Entry - {ledger_item.name}")
-        dialog.setMinimumWidth(500)
-        
+        dialog.setMinimumWidth(480)
+
+        input_style = "padding: 10px; font-size: 14px;"
+        input_height = 40
+        label_font = QFont()
+        label_font.setPointSize(11)
+        label_font.setBold(True)
+        btn_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+
         layout = QVBoxLayout()
-        
+        layout.setSpacing(6)
+        layout.setContentsMargins(20, 20, 20, 16)
+
+        def add_field_label(text):
+            lbl = QLabel(text)
+            lbl.setFont(label_font)
+            layout.addWidget(lbl)
+
         # Name
-        name_layout = QHBoxLayout()
-        name_layout.addWidget(QLabel("Name:"))
+        add_field_label("Name")
         name_input = QLineEdit(ledger_item.name)
-        name_layout.addWidget(name_input)
-        layout.addLayout(name_layout)
-        
+        name_input.setStyleSheet(input_style)
+        name_input.setMinimumHeight(input_height)
+        layout.addWidget(name_input)
+        layout.addSpacing(8)
+
         # Amount
-        amount_layout = QHBoxLayout()
-        amount_layout.addWidget(QLabel("Amount:"))
+        add_field_label("Amount")
         amount_input = QLineEdit(str(ledger_item.amount))
-        amount_layout.addWidget(amount_input)
-        layout.addLayout(amount_layout)
-        
-        # Type (Income/Expense)
-        type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("Type:"))
+        amount_input.setStyleSheet(input_style)
+        amount_input.setMinimumHeight(input_height)
+        layout.addWidget(amount_input)
+        layout.addSpacing(8)
+
+        # Type
+        add_field_label("Type")
         type_input = QComboBox()
         type_input.addItems(["Income", "Expense"])
         type_input.setCurrentText(ledger_item.type)
-        type_layout.addWidget(type_input)
-        layout.addLayout(type_layout)
-        
+        type_input.setStyleSheet(input_style)
+        type_input.setMinimumHeight(input_height)
+        layout.addWidget(type_input)
+        layout.addSpacing(8)
+
         # Paid Date
-        paid_date_layout = QHBoxLayout()
-        paid_date_layout.addWidget(QLabel("Paid Date:"))
+        add_field_label("Paid Date")
         paid_date_input = QDateEdit()
         paid_date_input.setCalendarPopup(True)
         paid_date_input.setDate(QDate.fromString(ledger_item.paid_date.strftime("%Y-%m-%d"), "yyyy-MM-dd"))
-        paid_date_layout.addWidget(paid_date_input)
-        layout.addLayout(paid_date_layout)
-        
+        paid_date_input.setStyleSheet(input_style)
+        paid_date_input.setMinimumHeight(input_height)
+        layout.addWidget(paid_date_input)
+        layout.addSpacing(8)
+
         # Income Date
-        income_date_layout = QHBoxLayout()
-        income_date_layout.addWidget(QLabel("Income Date:"))
+        add_field_label("Income Date")
         income_date_input = QDateEdit()
         income_date_input.setCalendarPopup(True)
         income_date_input.setDate(QDate.fromString(ledger_item.income_date.strftime("%Y-%m-%d"), "yyyy-MM-dd"))
-        income_date_layout.addWidget(income_date_input)
-        layout.addLayout(income_date_layout)
-        
+        income_date_input.setStyleSheet(input_style)
+        income_date_input.setMinimumHeight(input_height)
+        layout.addWidget(income_date_input)
+        layout.addSpacing(8)
+
         # Account selector
-        account_layout = QHBoxLayout()
-        account_layout.addWidget(QLabel("Account:"))
+        add_field_label("Account")
         account_selector = QComboBox()
         accounts = self.db.fetch_accounts(self.selected_profile.id)
         for acc in accounts:
             account_selector.addItem(acc.name)
-        # Set current account
         current_account_name = next((a.name for a in accounts if a.id == ledger_item.account_id), account.name)
         account_selector.setCurrentText(current_account_name)
-        account_layout.addWidget(account_selector)
-        layout.addLayout(account_layout)
-        
-        layout.addStretch(1)
-        
+        account_selector.setStyleSheet(input_style)
+        account_selector.setMinimumHeight(input_height)
+        layout.addWidget(account_selector)
+
+        layout.addSpacing(16)
+
         # Buttons
         button_layout = QHBoxLayout()
-        button_layout.addStretch(1)
-        
+        button_layout.setSpacing(10)
+
         delete_button = QPushButton("Delete")
-        delete_button.setStyleSheet("background-color: #8B0000; color: white;")
+        delete_button.setStyleSheet(btn_style)
+        delete_button.setMinimumHeight(40)
         delete_button.clicked.connect(
             lambda: self._delete_ledger_item(ledger_item, dialog, account)
         )
         button_layout.addWidget(delete_button)
-        
+
+        button_layout.addStretch(1)
+
         cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet(btn_style)
+        cancel_button.setMinimumHeight(40)
         cancel_button.clicked.connect(dialog.reject)
         button_layout.addWidget(cancel_button)
-        
+
         save_button = QPushButton("Save")
+        save_button.setStyleSheet(btn_style)
+        save_button.setMinimumHeight(40)
         save_button.clicked.connect(
             lambda: self._save_ledger_item(
                 ledger_item.id,
@@ -788,7 +719,7 @@ class Accounts(QStackedWidget):
             )
         )
         button_layout.addWidget(save_button)
-        
+
         layout.addLayout(button_layout)
         dialog.setLayout(layout)
         dialog.exec()
@@ -842,121 +773,120 @@ class Accounts(QStackedWidget):
                 )
 
     def create_account(self, name, account_type, balance):
-        self.db.create_account(self.selected_profile.id, name, account_type, balance)
-        self.setCurrentIndex(0)
+        try:
+            self.db.create_account(self.selected_profile.id, name, account_type, balance)
+            # Rebuild both views (accounts list + form) so the form is fresh
+            while self.count() > 0:
+                w = self.widget(0)
+                self.removeWidget(w)
+                w.deleteLater()
+            self.render_accounts()
+            self.render_create_account()
+            self.setCurrentIndex(0)
+            QMessageBox.information(
+                self, "Success", f"Account '{name}' created successfully!"
+            )
+        except Exception as e:
+            QMessageBox.critical(
+                self, "Error", f"Failed to create account: {str(e)}"
+            )
     
     def add_ledger_entry(self, account):
         """Show dialog to add a new ledger entry."""
         from datetime import date
-        from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDateEdit, QPushButton, QComboBox
-        
+
         dialog = QDialog(self)
         dialog.setWindowTitle("Add Ledger Entry")
-        dialog.setMinimumWidth(450)
-        
+        dialog.setMinimumWidth(480)
+
+        input_style = "padding: 10px; font-size: 14px;"
+        input_height = 40
+        label_font = QFont()
+        label_font.setPointSize(11)
+        label_font.setBold(True)
+        btn_style = "padding: 10px 20px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px; font-weight: bold;"
+
         layout = QVBoxLayout()
-        layout.setSpacing(12)
-        layout.setContentsMargins(16, 16, 16, 16)
-        
+        layout.setSpacing(6)
+        layout.setContentsMargins(20, 20, 20, 16)
+
         # Header
-        header_label = QLabel("➕ Add Ledger Entry")
+        header_label = QLabel("Add Ledger Entry")
         header_font = QFont()
-        header_font.setPointSize(14)
+        header_font.setPointSize(16)
         header_font.setBold(True)
         header_label.setFont(header_font)
-        header_label.setStyleSheet("margin-bottom: 8px;")
         layout.addWidget(header_label)
-        
-        desc_label = QLabel(f"Add a ledger entry to {account.name}")
-        desc_label.setStyleSheet("color: #bdc3c7; font-size: 11px; margin-bottom: 8px;")
+
+        desc_label = QLabel(f"Add a transaction to {account.name}")
+        desc_label.setStyleSheet("font-size: 13px; color: #90a4ae;")
         layout.addWidget(desc_label)
-        
+        layout.addSpacing(12)
+
+        def add_field_label(text):
+            lbl = QLabel(text)
+            lbl.setFont(label_font)
+            layout.addWidget(lbl)
+
         # Name
-        name_label = QLabel("Name")
-        name_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
-        layout.addWidget(name_label)
-        
+        add_field_label("Name")
         name_input = QLineEdit()
         name_input.setPlaceholderText("Transaction name")
+        name_input.setStyleSheet(input_style)
+        name_input.setMinimumHeight(input_height)
         layout.addWidget(name_input)
-        
+        layout.addSpacing(8)
+
         # Amount
-        amount_label = QLabel("Amount")
-        amount_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
-        layout.addWidget(amount_label)
-        
+        add_field_label("Amount")
         amount_input = QLineEdit('0.00')
+        amount_input.setStyleSheet(input_style)
+        amount_input.setMinimumHeight(input_height)
         layout.addWidget(amount_input)
-        
+        layout.addSpacing(8)
+
         # Type
-        type_label = QLabel("Type")
-        type_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
-        layout.addWidget(type_label)
-        
+        add_field_label("Type")
         type_combo = QComboBox()
         type_combo.addItems(["Income", "Expense"])
+        type_combo.setStyleSheet(input_style)
+        type_combo.setMinimumHeight(input_height)
         layout.addWidget(type_combo)
-        
+        layout.addSpacing(8)
+
         # Paid Date
-        paid_date_label = QLabel("Paid Date")
-        paid_date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
-        layout.addWidget(paid_date_label)
-        
+        add_field_label("Paid Date")
         paid_date_input = QDateEdit(date.today())
         paid_date_input.setCalendarPopup(True)
+        paid_date_input.setStyleSheet(input_style)
+        paid_date_input.setMinimumHeight(input_height)
         layout.addWidget(paid_date_input)
-        
+        layout.addSpacing(8)
+
         # Income Date
-        income_date_label = QLabel("Income Date")
-        income_date_label.setStyleSheet("font-size: 11px; font-weight: bold; margin-top: 8px;")
-        layout.addWidget(income_date_label)
-        
+        add_field_label("Income Date")
         income_date_input = QDateEdit(date.today())
         income_date_input.setCalendarPopup(True)
+        income_date_input.setStyleSheet(input_style)
+        income_date_input.setMinimumHeight(input_height)
         layout.addWidget(income_date_input)
-        
-        layout.addStretch(1)
-        
+
+        layout.addSpacing(16)
+
         # Buttons
         buttons_layout = QHBoxLayout()
+        buttons_layout.setSpacing(10)
         buttons_layout.addStretch(1)
-        
-        cancel_button = QPushButton("❌ Cancel")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
+
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet(btn_style)
+        cancel_button.setMinimumHeight(40)
         cancel_button.clicked.connect(dialog.reject)
         buttons_layout.addWidget(cancel_button)
-        
-        save_button = QPushButton("✅ Save Entry")
-        save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5dade2;
-            }
-            QPushButton:pressed {
-                background-color: #2980b9;
-            }
-        """)
+
+        save_button = QPushButton("Save Entry")
+        save_button.setStyleSheet(btn_style)
+        save_button.setMinimumHeight(40)
         save_button.clicked.connect(
             lambda: self._save_new_ledger_entry(
                 account,
@@ -969,7 +899,7 @@ class Accounts(QStackedWidget):
             )
         )
         buttons_layout.addWidget(save_button)
-        
+
         layout.addLayout(buttons_layout)
         dialog.setLayout(layout)
         dialog.exec()

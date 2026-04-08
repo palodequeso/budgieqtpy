@@ -33,11 +33,22 @@ yarn-error.log*
 *.sqlite
 *.sqlite3
 
+# Mobile app (not needed for web Docker image)
+mobile/
+android/
+
+# Qt desktop app (not needed for web Docker image)
+ui/
+deployment/
+*.AppImage
+*.apk
+*.spec
+org.palodequeso.budgie.*
+
 # Screenshots and docs
 screenshots/
-FEATURE_PARITY_ANALYSIS.md
-ISSUES.md
-PARITY_IMPLEMENTATION_SUMMARY.md
+*.png
+*.md
 
 # Test files
 tests/

@@ -39,7 +39,8 @@ class BudgetService:
         group_id: int,
         start_date: str,
         end_date: str,
-        periods: List[dict]
+        periods: List[dict],
+        debt_id: int = None,
     ) -> BudgetItem:
         """Create a new budget item with periods."""
         # Convert period dicts to BudgetItemPeriod objects
@@ -52,7 +53,7 @@ class BudgetService:
                 None  # budget_item_id set later
             )
             period_objects.append(period_obj)
-        
+
         return self.db.create_budget_item(
             profileId=profile_id,
             name=name,
@@ -61,7 +62,8 @@ class BudgetService:
             group=group_id,
             start_date=start_date,
             end_date=end_date,
-            periods=period_objects
+            periods=period_objects,
+            debt_id=debt_id,
         )
     
     def update_budget_item(
@@ -73,7 +75,8 @@ class BudgetService:
         group_id: int,
         start_date: str,
         end_date: str,
-        periods: List[dict]
+        periods: List[dict],
+        debt_id: int = None,
     ) -> BudgetItem:
         """Update an existing budget item."""
         # Convert period dicts to BudgetItemPeriod objects
@@ -86,7 +89,7 @@ class BudgetService:
                 budget_item_id
             )
             period_objects.append(period_obj)
-        
+
         return self.db.update_budget_item(
             budget_item_id=budget_item_id,
             name=name,
@@ -95,7 +98,8 @@ class BudgetService:
             group=group_id,
             start_date=start_date,
             end_date=end_date,
-            periods=period_objects
+            periods=period_objects,
+            debt_id=debt_id,
         )
     
     def delete_budget_item(self, budget_item_id: int) -> None:

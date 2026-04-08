@@ -1,4 +1,5 @@
-import { Divider, Box, Card, CardContent, Typography, Container } from '@mui/material';
+import { Alert, Divider, Box, Card, CardContent, Typography, Container, IconButton, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import DeleteIcon from '@mui/icons-material/Delete';
 import Button from '@mui/material/Button';
 import Paper from '@mui/material/Paper';
 import TextField from '@mui/material/TextField';
@@ -18,15 +19,34 @@ export default function Profiles() {
         fetchProfiles();
     }, []);
 
+    const [error, setError] = React.useState('');
+    const [deleteConfirm, setDeleteConfirm] = React.useState<{ id: number; name: string } | null>(null);
+
+    const deleteProfile = async (profileId: number) => {
+        try {
+            await api.delete(`/profiles/${profileId}`);
+            setDeleteConfirm(null);
+            fetchProfiles();
+        } catch (err) {
+            setError(err.message);
+            setDeleteConfirm(null);
+        }
+    };
+
     const createProfile = async () => {
         if (!newProfileName) {
             return;
         }
 
-        const res = await api.post('/profiles', { name: newProfileName, });
-        setProfiles([...profiles, res]); // not needed because fetch probably
-        setNewProfileName('');
-        fetchProfiles();
+        try {
+            const res = await api.post('/profiles', { name: newProfileName, });
+            setProfiles([...profiles, res]);
+            setNewProfileName('');
+            setError('');
+            fetchProfiles();
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -88,13 +108,14 @@ export default function Profiles() {
                             justifyContent: 'center'
                         }}>
                             {profiles.map((profile) => (
-                                <Card 
+                                <Card
                                     key={profile.id}
-                                    sx={{ 
+                                    sx={{
                                         minWidth: 180,
                                         minHeight: 120,
                                         cursor: 'pointer',
                                         transition: 'all 0.3s ease',
+                                        position: 'relative',
                                         backgroundColor: theme.palette.mode === 'dark' ? '#37474f' : '#f5f5f5',
                                         border: theme.palette.mode === 'dark' ? '2px solid #546e7a' : '2px solid #bdbdbd',
                                         '&:hover': {
@@ -106,13 +127,29 @@ export default function Profiles() {
                                     }}
                                     onClick={() => setSelectedProfileId(profile.id)}
                                 >
-                                    <CardContent sx={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
+                                    <IconButton
+                                        size="small"
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 4,
+                                            right: 4,
+                                            color: '#90a4ae',
+                                            '&:hover': { color: '#f44336' },
+                                        }}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setDeleteConfirm({ id: profile.id, name: profile.name });
+                                        }}
+                                    >
+                                        <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                    <CardContent sx={{
+                                        display: 'flex',
+                                        alignItems: 'center',
                                         justifyContent: 'center',
                                         height: '100%'
                                     }}>
-                                        <Typography variant="h6" sx={{ 
+                                        <Typography variant="h6" sx={{
                                             color: 'white',
                                             fontWeight: 'bold',
                                             textAlign: 'center'
@@ -127,6 +164,10 @@ export default function Profiles() {
                 )}
 
                 <Divider sx={{ my: 4 }} />
+
+                {error && (
+                    <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+                )}
 
                 {/* Create Profile Section */}
                 <Box>
@@ -170,6 +211,22 @@ export default function Profiles() {
                     </Box>
                 </Box>
             </Paper>
+
+            <Dialog open={deleteConfirm !== null} onClose={() => setDeleteConfirm(null)}>
+                <DialogTitle>Delete Profile</DialogTitle>
+                <DialogContent>
+                    <Typography>
+                        Are you sure you want to delete <strong>{deleteConfirm?.name}</strong>?
+                        This will permanently remove all accounts, budget items, and transaction history.
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+                    <Button color="error" variant="contained" onClick={() => deleteConfirm && deleteProfile(deleteConfirm.id)}>
+                        Delete
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 }

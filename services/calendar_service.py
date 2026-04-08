@@ -43,19 +43,23 @@ class CalendarService:
         knapsack.start_date = start
         knapsack.end_date = end
         
-        # Clear existing extrapolation items
-        self.db.clear_extrapolation_items(profile_id)
+        # Clear only unpaid extrapolation items (preserve paid ones with ledger entries)
+        self.db.clear_unpaid_extrapolation_items(profile_id)
         
         # Build schedule
         knapsack.schedule = Schedule()
         knapsack.build_input_date_columns()
         knapsack.build_unscheduled_schedule_entries()
         
-        # Schedule expenses
+        # Schedule expenses (two passes, matching DefaultKnapsack.run)
         unscheduled = knapsack.schedule_expense_entries_pass(
             knapsack.unscheduled_schedule_entries
         )
-        
+
+        # Second pass: push expenses up to find spots if possible
+        knapsack.push_expenses_up = True
+        unscheduled = knapsack.schedule_expense_entries_pass(unscheduled)
+
         # Save extrapolation items
         count = 0
         for date_key, column in knapsack.schedule.columns.items():
@@ -77,6 +81,17 @@ class CalendarService:
                     budget_item_id=expense.budget_item_id
                 )
                 count += 1
+
+        # Save unscheduled entries with income_date=None so they persist in the DB
+        for entry in unscheduled:
+            self.db.create_extrapolation_item(
+                profileId=profile_id,
+                date=entry.due_date,
+                amount=entry.amount,
+                income_date=None,
+                budget_item_id=entry.budget_item_id
+            )
+            count += 1
         
         # Rebuild schedule from saved extrapolation items to ensure proper data structure
         final_schedule = Schedule()

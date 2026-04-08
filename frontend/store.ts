@@ -36,27 +36,29 @@ export const useStore = create((set) => ({
     profiles: [],
     setProfiles: (profiles) => set({ profiles }),
     selectedProfileId: localStorage.getItem('budgie:profileId') ?? null,
-    setSelectedProfileId: (selectedProfileId) => set({ selectedProfileId }),
+    setSelectedProfileId: (selectedProfileId) => {
+        if (selectedProfileId) {
+            localStorage.setItem('budgie:profileId', selectedProfileId.toString());
+        } else {
+            localStorage.removeItem('budgie:profileId');
+        }
+        set({ selectedProfileId });
+    },
 }));
 
 export function fetchProfile(profileId: string | null = null) {
     profileId = profileId ? profileId : localStorage.getItem('budgie:profileId');
     if (profileId) {
         localStorage.setItem('budgie:profileId', profileId);
-        console.log('fetchProfile profileId', profileId);
-        api.get(`/profiles/${profileId}`).then(json => {
+        return api.get(`/profiles/${profileId}`).then(json => {
             const res = json as any;
-            console.log('res', res);
-            // console.log('profile fetch response', res);
             if (res) {
                 const profile = res;
-                console.log('fetchProfile profile fetched', profile);
                 useStore.setState({
                     profile,
                     accounts: profile.accounts,
                     budget: profile.budget_items,
-                    // colorOverrides: profile.colorOverrides,
-                    // budgetGroups: profile.budgetGroups,
+                    budgetGroups: profile.budget_groups || [],
                 });
             }
         });

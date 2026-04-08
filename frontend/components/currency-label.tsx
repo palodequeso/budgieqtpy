@@ -5,7 +5,7 @@ export default function CurrencyLabel({ amount }) {
     const [currency, _] = React.useState('USD');
 
     return (
-        <span>
+        <span style={{ whiteSpace: 'nowrap' }}>
             {amount ? amount.toLocaleString(currency, {
                 style: 'currency',
                 currency,

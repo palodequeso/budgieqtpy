@@ -18,133 +18,6 @@ import { api } from './renderUtils';
 import ScrollContainer from 'react-indiana-drag-scroll';
 import { useStore } from '../store';
 
-function sortableDate(dateStr) {
-    const date = dateStr ? new Date(dateStr) : new Date();
-    return date.toISOString().substring(0, 10);
-}
-
-function formatExtrapolationData(data: any, startingBalance: number): any {
-    const out: { [s: string]: CalendarIncomeColumn } = {};
-    const unscheduled: any[] = [];
-
-    console.log('data', data);
-    for (const extrapolationItem of data.extrapolation_items) {
-        if (!extrapolationItem.income_date) {
-            unscheduled.push(extrapolationItem);
-            continue;
-        }
-
-        const date = sortableDate(extrapolationItem.income_date);
-        if (!out[date]) {
-            out[date] = new CalendarIncomeColumn(extrapolationItem.income_date);
-        }
-
-        const previousEntry = out[date].entries.find(e => e.budgetItem.id === extrapolationItem.budget_item_id);
-        if (previousEntry) {
-            previousEntry.items.push(extrapolationItem);
-        } else {
-            const entry: CalendarEntry = new CalendarEntry();
-            entry.items = [extrapolationItem];
-            // entry.budgetItem = { ...extrapolationItem.budgetItem };
-            entry.incomeDate = extrapolationItem.income_date;
-            out[date].entries.push(entry);
-        }
-    }
-
-    // for (const oneOff of data.oneOffExtrapolationItems) {
-    //     const date = sortableDate(oneOff.incomeDate);
-    //     if (!out[date]) {
-    //         out[date] = new CalendarIncomeColumn(oneOff.incomeDate);
-    //     }
-    //     const calendarEntry = new CalendarEntry();
-    //     calendarEntry.items = [oneOff];
-    //     calendarEntry.budgetItem = null;
-    //     calendarEntry.incomeDate = oneOff.incomeDate;
-    //     out[date].entries.push(calendarEntry);
-    // }
-
-    // for (const ledgerEntry of data.ledgerEntries) {
-    //     const incomeDate = sortableDate(ledgerEntry.incomeDate);
-    //     console.log('ledger entry', ledgerEntry, incomeDate);
-    // }
-
-    const sortedDates = Object.keys(out).sort();
-
-    // for (const miscLedgerEntry of data.miscLedgerEntries) {
-    //     const incomeDate = sortableDate(miscLedgerEntry.incomeDate);
-    //     console.log('misc ledger entry', miscLedgerEntry, incomeDate);
-    // }
-
-    // for (const item of data.ledgerEntries) {
-    //     const incomeDate = sortableDate(item.incomeDate);
-    //     if (out[incomeDate]) {
-    //         // out[incomeDate].entries.push({
-    //         //     id: `ledger-${item.id}`,
-    //         //     amount: item.amount,
-    //         //     budgetItem: item.budgetItem,
-    //         //     date: item.date,
-    //         //     incomeDate: item.incomeDate,
-    //         //     ledgerEntry: item,
-    //         // });
-    //         // out[incomeDate].subTotal += parseFloat(item.amount);
-    //     }
-    // }
-
-    // for (const miscLedgerEntry of data.miscLedgerEntries) {
-    //     const ledgerDate = sortableDate(miscLedgerEntry.date);
-    //     let previousIncomeDate = '';
-    //     for (const incomeDate of sortedDates) {
-    //         if (incomeDate < ledgerDate) {
-    //             previousIncomeDate = incomeDate;
-    //         }
-    //     }
-    //     if (previousIncomeDate) {
-    //         // out[previousIncomeDate].entries.push({
-    //         //     id: `ledger-${miscLedgerEntry.id}`,
-    //         //     amount: miscLedgerEntry.amount,
-    //         //     budgetItem: { id: null, name: miscLedgerEntry.name },
-    //         //     date: miscLedgerEntry.date,
-    //         //     incomeDate: previousIncomeDate,
-    //         //     ledgerEntry: miscLedgerEntry,
-    //         // });
-    //         // out[previousIncomeDate].subTotal += parseFloat(
-    //         //     miscLedgerEntry.amount,
-    //         // );
-    //     }
-    // }
-
-    let previousDate: null | string = null;
-    let sortedOut: { [s: string]: CalendarIncomeColumn } = {};
-    sortedDates.forEach((date) => {
-        if (previousDate && out[previousDate]) {
-            out[date].carry = out[previousDate].total;
-        } else {
-            out[date].carry = startingBalance;
-        }
-
-        const incomeIndex = out[date].entries.findIndex(
-            (entry) => entry.budgetItem.type === 'income',
-        );
-        if (incomeIndex !== -1) {
-            previousDate = date;
-        }
-        out[date].income = null;
-        if (incomeIndex > -1) {
-            out[date].income = out[date].entries[incomeIndex];
-            out[date].entries.splice(incomeIndex, 1);
-            sortedOut[date] = out[date];
-        } else {
-            // HAX!! TODO
-            delete out[date];
-        }
-    });
-
-    return {
-        sorted: sortedOut,
-        unscheduled,
-    };
-}
-
 export default function Calendar() {
     const [schedule, setSchedule] = React.useState<any>(null);
     const [extrapolation, setExtrapolation] = React.useState<{ [s: string]: CalendarIncomeColumn }>({});
@@ -155,7 +28,9 @@ export default function Calendar() {
     const [isLoading, setIsLoading] = React.useState(true);
     const [fetchError, setFetchError] = React.useState(null);
     const [theme, setTheme] = React.useState(localStorage.getItem('budgie:theme') || 'dark');
+    const [showAllColumns, setShowAllColumns] = React.useState(false);
     const profile = useStore((state) => (state as any).profile);
+    const todayHeaderRef = React.useRef<HTMLTableCellElement | null>(null);
 
     const extrapolate = async () => {
         if (!profile) {
@@ -181,32 +56,26 @@ export default function Calendar() {
 
         try {
             const json = await api.get(`/schedule/${profile.id}`);
-            // const startingBalance = profile.accounts.reduce((carry, account) => {
-            //     return parseFloat(carry) + parseFloat(account.balance);
-            // }, 0);
 
             setSchedule(json);
-            // const { sorted, unscheduled } = formatExtrapolationData(json, startingBalance);
-            // setExtrapolation(sorted);
-            // setUnscheduledItems(unscheduled);
 
-            // const miscEntries = {};
-            // let maxRows = 0;
-            // for (const date of Object.keys(sorted)) {
-            //     for (const entry of sorted[date].entries) {
-            //         if (!entry.budgetItem || entry.budgetItem.id === null) {
-            //             if (!miscEntries[date]) {
-            //                 miscEntries[date] = [];
-            //             }
-            //             miscEntries[date].push(entry);
-            //             if (miscEntries[date].length > maxRows) {
-            //                 maxRows = miscEntries[date].length;
-            //             }
-            //         }
-            //     }
-            // }
-            // setMiscRowCount(maxRows);
-            // setMiscEntries(miscEntries);
+            // Extract unscheduled items from schedule response.
+            // Map raw extrapolation items to the shape the unscheduled dialog expects:
+            //   { id, budgetItem: { name }, date, amount, incomeDate }
+            const budgetItemMap: Record<number, any> = {};
+            for (const bi of (json.budget_item_list || [])) {
+                budgetItemMap[bi.id] = bi;
+            }
+            const unscheduled = (json.extrapolation_items || [])
+                .filter((item: any) => !item.income_date)
+                .map((item: any) => ({
+                    id: item.id,
+                    budgetItem: budgetItemMap[item.budget_item_id] || { name: 'Unknown' },
+                    date: item.due_date,
+                    amount: item.amount,
+                    incomeDate: null,
+                }));
+            setUnscheduledItems(unscheduled);
 
             const elements: HTMLDivElement[] = [];
             let maxHeight = 0;
@@ -233,8 +102,8 @@ export default function Calendar() {
     const getVisibleIncomeDates = () => {
         if (!schedule?.sorted_income_dates) return [];
         
-        // If no hidden_through, show all dates
-        if (!profile?.hidden_through) {
+        // If showing all columns or no hidden_through, show all dates
+        if (showAllColumns || !profile?.hidden_through) {
             return schedule.sorted_income_dates;
         }
         
@@ -247,6 +116,27 @@ export default function Calendar() {
     };
 
     const visibleIncomeDates = getVisibleIncomeDates();
+
+    // Determine the "today" column (last income_date <= today)
+    const today = new Date().toISOString().slice(0, 10);
+    const todayColumnDate = React.useMemo(() => {
+        let result: string | null = null;
+        for (const d of visibleIncomeDates) {
+            if (d <= today) {
+                result = d;
+            } else {
+                break;
+            }
+        }
+        return result;
+    }, [visibleIncomeDates, today]);
+
+    // Auto-scroll to the current period header after loading
+    React.useEffect(() => {
+        if (!isLoading && todayHeaderRef.current) {
+            todayHeaderRef.current.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+        }
+    }, [isLoading, todayColumnDate]);
 
     return (
         <Paper className="section" id="calendar" elevation={2}>
@@ -262,6 +152,8 @@ export default function Calendar() {
                         setEditingCell={setEditingCell}
                         load={load}
                         schedule={schedule}
+                        showAllColumns={showAllColumns}
+                        setShowAllColumns={setShowAllColumns}
                     />
                     <div>
                         {isLoading ? (
@@ -277,14 +169,19 @@ export default function Calendar() {
                                             <TableRow hover>
                                                 <TableCell></TableCell>
                                                 {visibleIncomeDates.map((date) => {
+                                                        const isTodayCol = date === todayColumnDate;
                                                         return (
                                                             <TableCell
+                                                                ref={isTodayCol ? todayHeaderRef : undefined}
                                                                 style={{
-                                                                    fontSize:
-                                                                        '11px',
+                                                                    fontSize: '11px',
+                                                                    fontWeight: isTodayCol ? 'bold' : undefined,
+                                                                    borderLeft: isTodayCol ? '3px solid #1976d2' : undefined,
+                                                                    backgroundColor: isTodayCol ? (theme === 'dark' ? '#1a3a5c' : '#bbdefb') : undefined,
                                                                 }}
                                                                 key={date}
                                                             >
+                                                                {isTodayCol && <span style={{ color: '#1976d2', marginRight: 4 }}>&#9658;</span>}
                                                                 {<DateLabel date={date} />}
                                                             </TableCell>
                                                         );
@@ -298,6 +195,7 @@ export default function Calendar() {
                                                 theme={theme}
                                                 miscEntries={miscEntries}
                                                 miscRowCount={miscRowCount}
+                                                onReload={load}
                                             />
                                         ) : (
                                             <TableBody></TableBody>

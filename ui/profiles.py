@@ -27,7 +27,12 @@ class Profiles(QWidget):
 
     def render_profiles(self):
         self.profiles = self.profilesApi.get_profiles()
-        
+
+        # Clear existing layout if any
+        old_layout = self.layout()
+        if old_layout is not None:
+            QWidget().setLayout(old_layout)
+
         # Main vertical layout with padding
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(40, 40, 40, 40)
@@ -39,7 +44,7 @@ class Profiles(QWidget):
         welcome_layout = QVBoxLayout()
         
         # App title
-        title = QLabel("🐦 Budgie")
+        title = QLabel("Budgie")
         title_font = QFont()
         title_font.setPointSize(32)
         title_font.setBold(True)
@@ -183,5 +188,13 @@ class Profiles(QWidget):
         self.show()
 
     def create_profile(self, name):
-        self.profilesApi.create_profile(name)
-        self.render_profiles()
+        if not name.strip():
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Invalid Input", "Please enter a profile name.")
+            return
+        try:
+            self.profilesApi.create_profile(name)
+            self.render_profiles()
+        except Exception as e:
+            from PyQt6.QtWidgets import QMessageBox
+            QMessageBox.critical(self, "Error", f"Failed to create profile: {str(e)}")

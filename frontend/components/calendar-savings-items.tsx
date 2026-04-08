@@ -1,4 +1,5 @@
 import {
+    Alert,
     Dialog,
     DialogTitle,
     DialogContent,
@@ -24,6 +25,7 @@ export default function CalendarSavingsItems({ open, profile, close }) {
     const [savingsAccount, setSavingsAccount] = React.useState('');
     const [spendingBuffer, setSpendingBuffer] = React.useState(400);
     const [computedSavingsItems, setComputedSavingsItems] = React.useState([]); // matches order of sortedIncomeDates
+    const [saveError, setSaveError] = React.useState('');
 
     React.useEffect(() => {
         const savingsAccounts = profile.accounts.filter(account => account.type === 'savings');
@@ -33,28 +35,37 @@ export default function CalendarSavingsItems({ open, profile, close }) {
     }, [profile.accounts]);
 
     async function save() {
-        await api.post(`/calendar/${profile.id}/savecomputedsavings`, {
-            addedEntries: computedSavingsItems,
-            savingsAccount,
-        });
-        close(true); // Pass true to indicate successful save
-        fetchProfile(profile.id);
+        try {
+            await api.post(`/calendar/${profile.id}/savecomputedsavings`, {
+                addedEntries: computedSavingsItems,
+                savingsAccount,
+            });
+            close(true);
+            fetchProfile(profile.id);
+        } catch (err) {
+            setSaveError(err.message);
+        }
     }
 
     async function computeSavingsItems() {
-        const result = await api.post(`/calendar/${profile.id}/computesavings`, {
-            savingsAccount,
-            spendingBuffer,
-        });
-        console.log('result', result);
-        setComputedSavingsItems(result.addedEntries);
-        setComputed(true);
+        try {
+            setSaveError('');
+            const result = await api.post(`/calendar/${profile.id}/computesavings`, {
+                savingsAccount,
+                spendingBuffer,
+            });
+            setComputedSavingsItems(result.addedEntries);
+            setComputed(true);
+        } catch (err) {
+            setSaveError(err.message);
+        }
     }
 
     return (
         <Dialog open={open} onClose={() => close(false)} maxWidth="md" fullWidth>
             <DialogTitle>Add Savings Items</DialogTitle>
             <DialogContent>
+                {saveError && <Alert severity="error" sx={{ mb: 2 }}>{saveError}</Alert>}
                 <Paper>
                     <h4>Add Extrapolation/Budget Item</h4>
                     <Grid container spacing={2}>

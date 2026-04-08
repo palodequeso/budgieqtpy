@@ -7,14 +7,22 @@ from .budget_item import BudgetItem
 from .budget_item_period import BudgetItemPeriod
 from .extrapolation_item import ExtrapolationItem
 from .ledger_entry import LedgerEntry
+from .debt import Debt
 
 
 class Database:
-    # Use environment variable for database path, default to budgie.db
-    DB_PATH = os.getenv('DATABASE_PATH', 'budgie.db')
-    db = sqlite3.connect(DB_PATH)
+    @staticmethod
+    def default_db_path() -> str:
+        data_dir = os.path.join(
+            os.environ.get('XDG_DATA_HOME', os.path.expanduser('~/.local/share')),
+            'budgie'
+        )
+        os.makedirs(data_dir, exist_ok=True)
+        return os.path.join(data_dir, 'budgie.db')
 
-    def __init__(self):
+    def __init__(self, db_path: str = None):
+        path = db_path or os.getenv('DATABASE_PATH') or self.default_db_path()
+        self.db = sqlite3.connect(path)
         self.create_tables()
         # c = self.db.cursor()
         # c.execute('delete from budget_item where id = 19;')
@@ -28,6 +36,7 @@ class Database:
         BudgetItemPeriod.create_table(self.db)
         ExtrapolationItem.create_table(self.db)
         LedgerEntry.create_table(self.db)
+        Debt.create_table(self.db)
         self._create_settings_table()
     
     def _create_settings_table(self):
@@ -49,6 +58,22 @@ class Database:
 
     def fetch_budget_groups(self, profileId) -> list[BudgetGroup]:
         return BudgetGroup.fetch_all(self.db, profileId)
+
+    def _resolve_budget_group_id(self, profile_id, group):
+        """Resolve a group name string to its integer ID. Pass-through if already an int or None."""
+        if group is None or isinstance(group, int):
+            return group
+        if isinstance(group, str):
+            # Try to parse as int first (already an ID stored as string)
+            try:
+                return int(group)
+            except ValueError:
+                pass
+            # Look up by name
+            groups = BudgetGroup.fetch_all(self.db, profile_id)
+            match = next((g for g in groups if g.name == group), None)
+            return match.id if match else None
+        return group
 
     def fetch_budget_items(self, profileId) -> list[BudgetItem]:
         return BudgetItem.fetch_all(self.db, profileId)
@@ -97,6 +122,22 @@ class Database:
         row = cursor.fetchone()
         return int(row[0]) if row else None
     
+    def get_setting(self, key: str) -> str | None:
+        """Get a setting value by key."""
+        cursor = self.db.cursor()
+        cursor.execute("SELECT value FROM app_settings WHERE key = ?", (key,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+    def set_setting(self, key: str, value: str):
+        """Set a setting value by key."""
+        cursor = self.db.cursor()
+        cursor.execute(
+            "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
+            (key, value)
+        )
+        self.db.commit()
+
     def get_profile_by_id(self, profile_id: int) -> Profile | None:
         """Fetch a profile by ID."""
         cursor = self.db.cursor()
@@ -118,25 +159,43 @@ class Database:
         return budget_group
 
     def create_budget_item(
-        self, profileId, name, type, amount, group, start_date, end_date, periods
+        self, profileId, name, type, amount, group, start_date, end_date, periods, debt_id=None
     ):
+        # Resolve group name to group ID
+        group_id = self._resolve_budget_group_id(profileId, group)
         budget_item = BudgetItem(
-            name, type, amount, start_date, end_date, group, periods
+            name, type, amount, start_date, end_date, group_id, periods, debt_id=debt_id
         )
         budget_item.create(self.db, profileId)
         return budget_item
 
     def create_extrapolation_item(
-        self, profileId, date, amount, income_date, budget_item_id, category=None
+        self, profileId, date, amount, income_date, budget_item_id, category=None, name=None
     ):
         extrapolation_item = ExtrapolationItem(
-            date, amount, income_date, budget_item_id, category=category
+            date, amount, income_date, budget_item_id, category=category, name=name
         )
         extrapolation_item.create(self.db, profileId)
         return extrapolation_item
 
     def clear_extrapolation_items(self, profileId):
         ExtrapolationItem.clear(self.db, profileId)
+
+    def clear_unpaid_extrapolation_items(self, profileId):
+        """Clear only unpaid budget-generated extrapolation items.
+
+        Preserves items that were manually created or computed separately:
+        debt payments, savings transfers, and one-off entries.
+        """
+        cursor = self.db.cursor()
+        cursor.execute(
+            """DELETE FROM extrapolation_item
+               WHERE profile_id = ?
+                 AND ledger_entry_id IS NULL
+                 AND (category IS NULL OR category = '')""",
+            (profileId,)
+        )
+        self.db.commit()
 
     def fetch_extrapolation_items(self, profileId):
         return ExtrapolationItem.fetch_all(self.db, profileId)
@@ -195,18 +254,23 @@ class Database:
         pass
 
     # Budget item methods
-    def update_budget_item(self, budget_item_id, name, type, amount, group, start_date, end_date, periods):
+    def update_budget_item(self, budget_item_id, name, type, amount, group, start_date, end_date, periods, debt_id=None):
         from datetime import datetime
+        # Resolve group name to group ID — need profile_id from the existing item
         cursor = self.db.cursor()
+        cursor.execute("SELECT profile_id FROM budget_item WHERE id = ?", (budget_item_id,))
+        row = cursor.fetchone()
+        profile_id = row[0] if row else None
+        group_id = self._resolve_budget_group_id(profile_id, group) if profile_id else group
         datetime_now = datetime.now()
         cursor.execute(
             """
             UPDATE budget_item
             SET name = ?, type = ?, amount = ?, budget_group_id = ?,
-                start_date = ?, end_date = ?, updated_at = ?
+                start_date = ?, end_date = ?, updated_at = ?, debt_id = ?
             WHERE id = ?
             """,
-            (name, type, amount, group, start_date, end_date, datetime_now, budget_item_id),
+            (name, type, amount, group_id, start_date, end_date, datetime_now, debt_id, budget_item_id),
         )
         self.db.commit()
         
@@ -295,7 +359,7 @@ class Database:
         from datetime import datetime, date
         cursor = self.db.cursor()
         cursor.execute(
-            "SELECT due_date, amount, income_date, budget_item_id, overridden_at, ledger_entry_id, id, created_at, updated_at FROM extrapolation_item WHERE id = ?",
+            "SELECT due_date, amount, income_date, budget_item_id, overridden_at, ledger_entry_id, id, created_at, updated_at, category FROM extrapolation_item WHERE id = ?",
             (item_id,),
         )
         row = cursor.fetchone()
@@ -306,7 +370,8 @@ class Database:
                 date.fromisoformat(row[2]) if row[2] else None,
                 row[3], row[4], row[5], row[6],
                 datetime.fromisoformat(row[7]),
-                datetime.fromisoformat(row[8])
+                datetime.fromisoformat(row[8]),
+                category=row[9]
             )
         return None
 
@@ -342,4 +407,157 @@ class Database:
             "UPDATE extrapolation_item SET income_date = ?, updated_at = ? WHERE id = ?",
             (income_date, datetime_now, item_id),
         )
+        self.db.commit()
+
+    def move_extrapolation_items(self, profile_id, budget_item_id, from_income_date, to_income_date):
+        """Move all extrapolation items for a budget item from one income date to another."""
+        from datetime import datetime
+        cursor = self.db.cursor()
+        datetime_now = datetime.now()
+        cursor.execute(
+            """UPDATE extrapolation_item
+               SET income_date = ?, updated_at = ?
+               WHERE profile_id = ? AND budget_item_id = ? AND income_date = ?""",
+            (to_income_date, datetime_now, profile_id, budget_item_id, from_income_date),
+        )
+        count = cursor.rowcount
+        self.db.commit()
+        return count
+
+    def split_extrapolation_item(self, item_id, keep_amount, remainder_income_date=None):
+        """Split an extrapolation item into two: one keeps keep_amount, a new one gets the remainder."""
+        from datetime import datetime
+        cursor = self.db.cursor()
+
+        # Fetch the original item
+        cursor.execute("SELECT * FROM extrapolation_item WHERE id = ?", (item_id,))
+        row = cursor.fetchone()
+        if not row:
+            raise ValueError(f"Extrapolation item {item_id} not found")
+
+        cols = [desc[0] for desc in cursor.description]
+        item = dict(zip(cols, row))
+
+        original_amount = float(item["amount"])
+        keep = float(keep_amount)
+
+        if keep >= abs(original_amount) or keep <= 0:
+            raise ValueError("Keep amount must be between 0 and the original amount")
+
+        # For expenses, amounts are negative
+        if original_amount < 0:
+            new_keep = -abs(keep)
+            new_remainder = original_amount - new_keep  # remainder is the rest of the negative
+        else:
+            new_keep = abs(keep)
+            new_remainder = original_amount - new_keep
+
+        now = datetime.now()
+
+        # Update original item with the keep amount
+        cursor.execute(
+            "UPDATE extrapolation_item SET amount = ?, updated_at = ? WHERE id = ?",
+            (new_keep, now, item_id),
+        )
+
+        # Create remainder item (same budget_item_id, optionally different income_date)
+        dest_income_date = remainder_income_date or item["income_date"]
+        cursor.execute(
+            """INSERT INTO extrapolation_item
+               (due_date, amount, income_date, created_at, updated_at, budget_item_id, profile_id, category)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                item["due_date"],
+                new_remainder,
+                dest_income_date,
+                now,
+                now,
+                item["budget_item_id"],
+                item["profile_id"],
+                item["category"],
+            ),
+        )
+        remainder_id = cursor.lastrowid
+        self.db.commit()
+
+        return {
+            "success": True,
+            "original_id": item_id,
+            "original_amount": new_keep,
+            "remainder_id": remainder_id,
+            "remainder_amount": new_remainder,
+            "remainder_income_date": dest_income_date,
+        }
+
+    def delete_profile(self, profile_id):
+        """Delete a profile and cascade to all related data."""
+        cursor = self.db.cursor()
+        cursor.execute("DELETE FROM debt WHERE profile_id = ?", (profile_id,))
+        cursor.execute("DELETE FROM extrapolation_item WHERE profile_id = ?", (profile_id,))
+        cursor.execute(
+            "DELETE FROM budget_item_period WHERE budget_item_id IN (SELECT id FROM budget_item WHERE profile_id = ?)",
+            (profile_id,),
+        )
+        cursor.execute("DELETE FROM budget_item WHERE profile_id = ?", (profile_id,))
+        cursor.execute("DELETE FROM budget_group WHERE profile_id = ?", (profile_id,))
+        # Delete ledger entries for each account in this profile
+        cursor.execute("SELECT id FROM account WHERE profile_id = ?", (profile_id,))
+        account_rows = cursor.fetchall()
+        for row in account_rows:
+            cursor.execute("DELETE FROM ledger_entry WHERE account_id = ?", (row[0],))
+        cursor.execute("DELETE FROM account WHERE profile_id = ?", (profile_id,))
+        cursor.execute("DELETE FROM profiles WHERE id = ?", (profile_id,))
+        self.db.commit()
+
+    def delete_account(self, account_id):
+        """Delete an account and its ledger entries."""
+        cursor = self.db.cursor()
+        cursor.execute(
+            "UPDATE extrapolation_item SET ledger_entry_id = NULL WHERE ledger_entry_id IN (SELECT id FROM ledger_entry WHERE account_id = ?)",
+            (account_id,),
+        )
+        cursor.execute("DELETE FROM ledger_entry WHERE account_id = ?", (account_id,))
+        cursor.execute("DELETE FROM account WHERE id = ?", (account_id,))
+        self.db.commit()
+
+    # Debt methods
+    def fetch_debts(self, profileId) -> list[Debt]:
+        return Debt.fetch_all(self.db, profileId)
+
+    def create_debt(self, profileId, name, total_amount, remaining_amount, min_payment, interest_rate) -> Debt:
+        debt = Debt(name, total_amount, remaining_amount, min_payment, interest_rate)
+        debt.create(self.db, profileId)
+        return debt
+
+    def update_debt(self, debt_id, name, total_amount, remaining_amount, min_payment, interest_rate):
+        from datetime import datetime
+        cursor = self.db.cursor()
+        datetime_now = datetime.now()
+        cursor.execute(
+            """
+            UPDATE debt
+            SET name = ?, total_amount = ?, remaining_amount = ?, min_payment = ?,
+                interest_rate = ?, updated_at = ?
+            WHERE id = ?
+            """,
+            (name, total_amount, remaining_amount, min_payment, interest_rate, datetime_now, debt_id),
+        )
+        self.db.commit()
+
+        cursor.execute(
+            "SELECT name, total_amount, remaining_amount, min_payment, interest_rate, profile_id, id, created_at, updated_at FROM debt WHERE id = ?",
+            (debt_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            return Debt(
+                row[0], row[1], row[2], row[3], row[4], row[5], row[6],
+                datetime.fromisoformat(row[7]),
+                datetime.fromisoformat(row[8])
+            )
+        return None
+
+    def delete_debt(self, debt_id):
+        cursor = self.db.cursor()
+        cursor.execute("DELETE FROM debt WHERE id = ?", (debt_id,))
         self.db.commit()

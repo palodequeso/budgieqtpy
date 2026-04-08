@@ -97,19 +97,20 @@ class BaseScheduler:
                 if new_date >= start_date:
                     dates.append(new_date)
         elif period.type == "Monthly":
-            months = math.ceil(((end_date - start_date).days + 1) / 30)
-            for i in range(months):
-                date_diff = start_date + timedelta(days=i * 30)
+            # Iterate by (year, month) to avoid duplicates from approximate day math
+            year = start_date.year
+            month = start_date.month
+            while True:
                 period_day = 0
                 if period.value == "Last":
                     # Use calendar.monthrange to get correct last day (handles leap years)
-                    period_day = calendar.monthrange(date_diff.year, date_diff.month)[1]
+                    period_day = calendar.monthrange(year, month)[1]
                 else:
                     period_day = int(re.sub(r"[^0-9]", "", period.value))
                     # Ensure day is valid for the month (e.g., Feb 30 -> Feb 28/29)
-                    max_day = calendar.monthrange(date_diff.year, date_diff.month)[1]
+                    max_day = calendar.monthrange(year, month)[1]
                     period_day = min(period_day, max_day)
-                new_date = date(date_diff.year, date_diff.month, period_day)
+                new_date = date(year, month, period_day)
                 if period.business_day == "Previous":
                     # If Saturday (5) or Sunday (6), move to previous Friday
                     if new_date.weekday() == 5:  # Saturday
@@ -122,9 +123,16 @@ class BaseScheduler:
                         new_date = new_date + timedelta(days=2)
                     elif new_date.weekday() == 6:  # Sunday
                         new_date = new_date + timedelta(days=1)
+                if new_date > end_date:
+                    break
                 # Only include dates >= start_date
                 if new_date >= start_date:
                     dates.append(new_date)
+                # Advance to next month
+                month += 1
+                if month > 12:
+                    month = 1
+                    year += 1
         elif period.type == "Business Days":
             days = (end_date - start_date).days + 1
             for i in range(days):

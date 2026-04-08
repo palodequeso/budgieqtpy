@@ -23,6 +23,7 @@ from database.budget_group import BudgetGroup
 from database.budget_item import BudgetItem
 from database.database import Database
 from database.profile import Profile
+from ui.onboarding import HelpIcon, HELP_TEXTS
 
 
 class Budget(QStackedWidget):
@@ -43,6 +44,19 @@ class Budget(QStackedWidget):
         self.render_budget()
         self.render_budget_item_form()
 
+    def _clear_all_widgets(self):
+        """Remove all widgets from the stacked widget."""
+        while self.count() > 0:
+            w = self.widget(0)
+            self.removeWidget(w)
+            w.deleteLater()
+
+    def refresh(self):
+        """Re-fetch data from DB and rebuild both the list and form views."""
+        self._clear_all_widgets()
+        self.render_budget()
+        self.render_budget_item_form()
+
     def render_budget(self):
         widget = QWidget()
         vl = QVBoxLayout()
@@ -51,78 +65,66 @@ class Budget(QStackedWidget):
 
         # Title section
         title_container = QWidget()
-        title_container.setStyleSheet("border-radius: 8px; padding: 15px;")
+        title_container.setStyleSheet("padding: 15px;")
         title_layout = QHBoxLayout()
         title_layout.setContentsMargins(10, 5, 10, 5)
-        
-        budget_title = QLabel("💰 Budget Items")
+
+        budget_title = QLabel("Budget Items")
         budget_title_font = QFont()
         budget_title_font.setPointSize(18)
         budget_title_font.setBold(True)
         budget_title.setFont(budget_title_font)
         title_layout.addWidget(budget_title)
+        title_layout.addWidget(HelpIcon(HELP_TEXTS["budget"]))
         title_layout.addStretch(1)
-        
+
         # Add Budget Item button in title
-        createButton = QPushButton("➕ Add Budget Item")
+        createButton = QPushButton("Add Budget Item")
         createButton.setStyleSheet("""
             QPushButton {
-                background-color: #1976d2;
-                color: white;
                 padding: 10px 20px;
-                border: none;
+                border: 1px solid #546e7a;
                 border-radius: 5px;
                 font-size: 13px;
                 font-weight: bold;
             }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-            QPushButton:pressed {
-                background-color: #0d47a1;
-            }
         """)
         createButton.clicked.connect(lambda: self.setCurrentIndex(1))
         title_layout.addWidget(createButton)
-        
+
         title_container.setLayout(title_layout)
         vl.addWidget(title_container)
 
         # Budget items table
         self.budget_groups = self.db.fetch_budget_groups(self.selected_profile.id)
         self.budget_items = self.db.fetch_budget_items(self.selected_profile.id)
-        
+
         if self.budget_items:
             # Table label
-            table_label = QLabel(f"📋 {len(self.budget_items)} Budget Items")
+            table_label = QLabel(f"{len(self.budget_items)} Budget Items")
             table_label_font = QFont()
             table_label_font.setPointSize(14)
             table_label_font.setBold(True)
             table_label.setFont(table_label_font)
             vl.addWidget(table_label)
-            
+
             table = QTableWidget()
             table.setColumnCount(10)
             table.setRowCount(len(self.budget_items))
             # Style the table
             table.setStyleSheet("""
                 QTableWidget {
-                    border: 2px solid;
                     border-radius: 8px;
                 }
                 QTableWidget::item {
                     padding: 8px;
                 }
-                QTableWidget::item:selected {
-                    background-color: #1976d2;
-                }
                 QHeaderView::section {
                     padding: 10px;
-                    border: none;
                     font-weight: bold;
                 }
             """)
-            
+
             table.setHorizontalHeaderLabels(
                 [
                     "Name",
@@ -143,27 +145,31 @@ class Budget(QStackedWidget):
             idx = 0
             for budget_items in self.budget_items:
                 # Name with emoji based on type
-                name_item = QTableWidgetItem(f"{'💵' if budget_items.type == 'Income' else '💸'} {budget_items.name}")
+                name_item = QTableWidgetItem(budget_items.name)
                 table.setItem(idx, 0, name_item)
-                
+
                 # Type with color
                 type_item = QTableWidgetItem(budget_items.type)
                 table.setItem(idx, 1, type_item)
-                
+
                 # Amount formatted as currency
                 amount_item = QTableWidgetItem(f"${float(budget_items.amount):,.2f}")
                 table.setItem(idx, 2, amount_item)
-                
+
                 table.setItem(
                     idx, 3, QTableWidgetItem(budget_items.start_date.strftime("%Y-%m-%d"))
                 )
                 table.setItem(
                     idx, 4, QTableWidgetItem(budget_items.end_date.strftime("%Y-%m-%d"))
                 )
-                
+
                 # Group name instead of ID
-                group = next((g for g in self.budget_groups if g.id == budget_items.budget_group_id), None)
-                group_name = group.name if group else "None"
+                gid = budget_items.budget_group_id
+                if isinstance(gid, str):
+                    group_name = gid  # Legacy: name stored directly
+                else:
+                    group = next((g for g in self.budget_groups if g.id == gid), None)
+                    group_name = group.name if group else "None"
                 table.setItem(idx, 5, QTableWidgetItem(group_name))
 
                 # Periods formatted nicely
@@ -173,86 +179,194 @@ class Budget(QStackedWidget):
                     if period.business_day != "None":
                         periodsStr += " (" + period.business_day + ")\n"
                 table.setItem(idx, 6, QTableWidgetItem(periodsStr.strip()))
-                
+
                 table.setItem(
                     idx, 7, QTableWidgetItem(budget_items.created_at.strftime("%Y-%m-%d"))
                 )
                 table.setItem(
                     idx, 8, QTableWidgetItem(budget_items.updated_at.strftime("%Y-%m-%d"))
                 )
-                
+
                 # Add Edit and Delete buttons
                 button_widget = QWidget()
                 button_layout = QHBoxLayout()
                 button_layout.setContentsMargins(2, 2, 2, 2)
                 button_layout.setSpacing(5)
-                
-                edit_button = QPushButton("✏️ Edit")
+
+                edit_button = QPushButton("Edit")
                 edit_button.setStyleSheet("""
                     QPushButton {
-                        background-color: #1976d2;
-                        color: white;
                         padding: 6px 12px;
-                        border: none;
+                        border: 1px solid #546e7a;
                         border-radius: 4px;
                         font-size: 11px;
-                    }
-                    QPushButton:hover {
-                        background-color: #1565c0;
                     }
                 """)
                 edit_button.clicked.connect(
                     lambda checked=False, item=budget_items: self.edit_budget_item(item)
                 )
                 button_layout.addWidget(edit_button)
-                
-                delete_button = QPushButton("🗑️ Delete")
+
+                delete_button = QPushButton("Delete")
                 delete_button.setStyleSheet("""
                     QPushButton {
-                        background-color: #d32f2f;
-                        color: white;
                         padding: 6px 12px;
-                        border: none;
+                        border: 1px solid #546e7a;
                         border-radius: 4px;
                         font-size: 11px;
-                    }
-                    QPushButton:hover {
-                        background-color: #c62828;
                     }
                 """)
                 delete_button.clicked.connect(
                     lambda checked=False, item=budget_items: self.delete_budget_item(item)
                 )
                 button_layout.addWidget(delete_button)
-                
+
                 button_widget.setLayout(button_layout)
                 table.setCellWidget(idx, 9, button_widget)
-                
+
                 # Set row height to accommodate buttons
                 table.setRowHeight(idx, 45)
                 idx += 1
             vl.addWidget(table)
         else:
             # No budget items message
-            no_items_label = QLabel("No budget items yet. Click 'Add Budget Item' to create one.")
-            no_items_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            no_items_label.setStyleSheet("font-size: 14px; padding: 40px; border-radius: 8px;")
-            vl.addWidget(no_items_label)
+            no_items_container = QWidget()
+            no_items_vl = QVBoxLayout()
+            no_items_vl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_items_title = QLabel("No budget items yet")
+            no_items_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            ni_font = QFont()
+            ni_font.setPointSize(16)
+            ni_font.setBold(True)
+            no_items_title.setFont(ni_font)
+            no_items_vl.addWidget(no_items_title)
+            no_items_desc = QLabel(
+                "Budget items are your recurring income and expenses — rent, salary, subscriptions, etc.\n"
+                "Each item has a schedule that tells Budgie when it occurs.\n\n"
+                "Click 'Add Budget Item' above to get started.\n"
+                "Once you have items, go to the Calendar tab and run Extrapolation to see them on your schedule."
+            )
+            no_items_desc.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_items_desc.setWordWrap(True)
+            no_items_desc.setStyleSheet("font-size: 13px; padding: 20px;")
+            no_items_vl.addWidget(no_items_desc)
+            no_items_container.setLayout(no_items_vl)
+            vl.addWidget(no_items_container)
+
+        # Budget Overview Chart - expense items grouped by budget group
+        self._render_budget_chart(vl)
 
         # vl.addStretch(1)
 
         widget.setLayout(vl)
         widget.show()
 
-        if self.count() > 0:
-            self.setCurrentIndex(0)
-            self.setCurrentWidget(widget)
-        else:
-            self.addWidget(widget)
+        self.addWidget(widget)
+
+    def _render_budget_chart(self, parent_layout: QVBoxLayout):
+        """Render a horizontal bar chart of expense budget items grouped by budget group."""
+        # Collect expense items only
+        expense_items = [item for item in self.budget_items if item.type == "Expense"]
+        if not expense_items:
+            return
+
+        # Group expense amounts by budget_group_id
+        group_totals: dict = {}
+        group_names: dict = {}
+        ungrouped_key = -1
+
+        for item in expense_items:
+            gid = item.budget_group_id if item.budget_group_id else ungrouped_key
+            group_totals[gid] = group_totals.get(gid, 0.0) + float(item.amount)
+            if gid not in group_names:
+                if gid == ungrouped_key:
+                    group_names[gid] = "Ungrouped"
+                elif isinstance(gid, str):
+                    # Legacy data: budget_group_id stored as group name string
+                    group_names[gid] = gid
+                else:
+                    group = next((g for g in self.budget_groups if g.id == gid), None)
+                    group_names[gid] = group.name if group else "Unknown"
+
+        if not group_totals:
+            return
+
+        max_total = max(group_totals.values())
+        max_bar_width = 300
+
+        # Color palette for groups
+        bar_colors = [
+            "#1976d2",  # blue
+            "#27ae60",  # green
+            "#e67e22",  # orange
+            "#8e44ad",  # purple
+            "#e74c3c",  # red
+            "#16a085",  # teal
+            "#f39c12",  # amber
+            "#2980b9",  # lighter blue
+            "#d35400",  # dark orange
+            "#c0392b",  # dark red
+        ]
+
+        # Chart container
+        chart_container = QWidget()
+        chart_container.setStyleSheet("padding: 15px;")
+        chart_layout = QVBoxLayout()
+        chart_layout.setSpacing(12)
+        chart_layout.setContentsMargins(10, 10, 10, 10)
+
+        # Section header
+        chart_title = QLabel("Budget Overview")
+        chart_title_font = QFont()
+        chart_title_font.setPointSize(14)
+        chart_title_font.setBold(True)
+        chart_title.setFont(chart_title_font)
+        chart_layout.addWidget(chart_title)
+
+        # Sort groups by total descending
+        sorted_groups = sorted(group_totals.items(), key=lambda x: x[1], reverse=True)
+
+        for idx, (gid, total) in enumerate(sorted_groups):
+            row_layout = QHBoxLayout()
+            row_layout.setSpacing(10)
+
+            # Group name label (fixed width for alignment)
+            name_label = QLabel(group_names[gid])
+            name_label.setFixedWidth(120)
+            name_label.setStyleSheet("font-size: 12px; font-weight: bold;")
+            name_label.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+            row_layout.addWidget(name_label)
+
+            # Colored bar
+            bar_width = int((total / max_total) * max_bar_width) if max_total > 0 else 0
+            bar_width = max(bar_width, 4)  # minimum visible width
+            color = bar_colors[idx % len(bar_colors)]
+
+            bar = QWidget()
+            bar.setFixedWidth(bar_width)
+            bar.setFixedHeight(22)
+            bar.setStyleSheet(
+                f"background-color: {color}; border-radius: 4px; border: none;"
+            )
+            row_layout.addWidget(bar)
+
+            # Amount label
+            amount_label = QLabel(f"${total:,.2f}")
+            amount_label.setStyleSheet("font-size: 12px;")
+            amount_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            row_layout.addWidget(amount_label)
+
+            row_layout.addStretch(1)
+            chart_layout.addLayout(row_layout)
+
+        chart_container.setLayout(chart_layout)
+        parent_layout.addWidget(chart_container)
 
     def edit_budget_item(self, budget_item: BudgetItem):
         """Load budget item into form for editing."""
         self.editing_budget_item = budget_item
+        self._clear_all_widgets()
+        self.render_budget()
         self.render_budget_item_form(budget_item)
         self.setCurrentIndex(1)
 
@@ -265,132 +379,109 @@ class Budget(QStackedWidget):
         
         # Content widget inside scroll
         content_widget = QWidget()
+        content_widget.setMaximumWidth(600)
         vl = QVBoxLayout()
-        vl.setSpacing(10)
-        vl.setContentsMargins(8, 8, 8, 8)
-        
-        # Header section
-        header_container = QWidget()
-        header_container.setStyleSheet("border-radius: 6px; padding: 10px;")
-        header_layout = QVBoxLayout()
-        header_layout.setSpacing(10)
-        
+        vl.setSpacing(8)
+        vl.setContentsMargins(24, 16, 24, 16)
+
         # Back button
-        back_row = QHBoxLayout()
-        back_button = QPushButton("⬅️ Back to Budget")
+        back_button = QPushButton("Back to Budget")
         back_button.setStyleSheet("""
             QPushButton {
-                background-color: #546e7a;
-                color: white;
-                padding: 6px 14px;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #607d8b;
+                padding: 8px 16px;
+                border: 1px solid #546e7a;
+                border-radius: 5px;
+                font-size: 12px;
             }
         """)
+        back_button.setMaximumWidth(160)
         back_button.clicked.connect(lambda: self.cancel_edit())
-        back_row.addWidget(back_button)
-        back_row.addStretch(1)
-        header_layout.addLayout(back_row)
-        
+        vl.addWidget(back_button)
+
+        vl.addSpacing(8)
+
         # Title
-        title = QLabel(f"✏️ {'Edit' if budget_item else 'Create'} Budget Item")
+        title = QLabel(f"{'Edit' if budget_item else 'Create'} Budget Item")
         title_font = QFont()
-        title_font.setPointSize(20)
+        title_font.setPointSize(18)
         title_font.setBold(True)
         title.setFont(title_font)
-        header_layout.addWidget(title)
-        
-        # Description
-        desc = QLabel("Budget items are recurring income or expenses that appear in your calendar. Set up when and how often they occur.")
-        desc.setStyleSheet("font-size: 12px;")
-        desc.setWordWrap(True)
-        header_layout.addWidget(desc)
-        
-        header_container.setLayout(header_layout)
-        vl.addWidget(header_container)
+        vl.addWidget(title)
 
-        # Two-column layout for main sections
-        two_col_layout = QHBoxLayout()
-        two_col_layout.setSpacing(10)
-        
-        # LEFT COLUMN - Basic Info Section
-        basic_container = QWidget()
-        basic_container.setStyleSheet("border-radius: 6px; padding: 10px;")
-        basic_layout = QVBoxLayout()
-        basic_layout.setSpacing(8)
-        
-        section_title = QLabel("📋 Basic Information")
-        section_title_font = QFont()
-        section_title_font.setPointSize(14)
-        section_title_font.setBold(True)
-        section_title.setFont(section_title_font)
-        basic_layout.addWidget(section_title)
-        
-        # Name field
-        name_label = QLabel("Item Name")
-        name_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        basic_layout.addWidget(name_label)
-        
+        desc = QLabel("Set up a recurring income or expense that appears in your calendar.")
+        desc.setStyleSheet("font-size: 13px;")
+        desc.setWordWrap(True)
+        vl.addWidget(desc)
+
+        vl.addSpacing(16)
+
+        # ── Helper for section titles ──
+        def section_label(text):
+            lbl = QLabel(text)
+            fnt = QFont()
+            fnt.setPointSize(13)
+            fnt.setBold(True)
+            lbl.setFont(fnt)
+            return lbl
+
+        def field_label(text):
+            lbl = QLabel(text)
+            fnt = QFont()
+            fnt.setPointSize(11)
+            fnt.setBold(True)
+            lbl.setFont(fnt)
+            return lbl
+
+        def help_label(text):
+            lbl = QLabel(text)
+            lbl.setStyleSheet("font-size: 12px; font-style: italic; color: #90a4ae;")
+            lbl.setWordWrap(True)
+            return lbl
+
+        input_style = "padding: 10px; font-size: 14px;"
+        input_height = 40
+
+        # ── Basic Information ──
+        vl.addWidget(section_label("Basic Information"))
+        vl.addSpacing(4)
+
+        vl.addWidget(field_label("Item Name"))
         name = QLineEdit()
         name.setPlaceholderText("e.g., Rent, Salary, Groceries")
         name.setText(budget_item.name if budget_item else "")
-        basic_layout.addWidget(name)
+        name.setStyleSheet(input_style)
+        name.setMinimumHeight(input_height)
+        vl.addWidget(name)
 
-        # Type field
-        type_label = QLabel("Type")
-        type_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        basic_layout.addWidget(type_label)
-        
-        type_help = QLabel("Is this money coming in (Income) or going out (Expense)?")
-        type_help.setStyleSheet("font-size: 10px; font-style: italic;")
-        basic_layout.addWidget(type_help)
-        
+        vl.addSpacing(8)
+
+        vl.addWidget(field_label("Type"))
+        vl.addWidget(help_label("Is this money coming in (Income) or going out (Expense)?"))
         type = QComboBox()
         type.addItems(["Income", "Expense"])
         if budget_item:
             type.setCurrentText(budget_item.type)
-        basic_layout.addWidget(type)
+        type.setStyleSheet(input_style)
+        type.setMinimumHeight(input_height)
+        vl.addWidget(type)
 
-        # Amount field
-        amount_label = QLabel("Amount")
-        amount_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        basic_layout.addWidget(amount_label)
-        
+        vl.addSpacing(8)
+
+        vl.addWidget(field_label("Amount"))
         amount = QLineEdit()
         amount.setPlaceholderText("0.00")
         amount.setText(str(budget_item.amount) if budget_item else "")
-        basic_layout.addWidget(amount)
-        
-        basic_layout.addStretch(1)
-        basic_container.setLayout(basic_layout)
-        two_col_layout.addWidget(basic_container)
+        amount.setStyleSheet(input_style)
+        amount.setMinimumHeight(input_height)
+        vl.addWidget(amount)
 
-        # RIGHT COLUMN - Contains Categorization and Date Range
-        right_column = QVBoxLayout()
-        right_column.setSpacing(10)
-        
-        # Group Section
-        group_container = QWidget()
-        group_container.setStyleSheet("border-radius: 6px; padding: 10px;")
-        group_layout = QVBoxLayout()
-        group_layout.setSpacing(8)
-        
-        group_section_title = QLabel("📊 Categorization (Optional)")
-        group_section_title_font = QFont()
-        group_section_title_font.setPointSize(14)
-        group_section_title_font.setBold(True)
-        group_section_title.setFont(group_section_title_font)
-        group_layout.addWidget(group_section_title)
-        
-        group_help = QLabel("Group similar items together (e.g., 'Housing', 'Transportation', 'Entertainment')")
-        group_help.setStyleSheet("font-size: 10px; font-style: italic;")
-        group_layout.addWidget(group_help)
-        
+        vl.addSpacing(20)
+
+        # ── Categorization ──
+        vl.addWidget(section_label("Categorization (Optional)"))
+        vl.addWidget(help_label("Group similar items together (e.g., 'Housing', 'Transportation')"))
+        vl.addSpacing(4)
+
         existing_groups = self.db.fetch_budget_groups(self.selected_profile.id)
         group_combo = QComboBox()
         group_combo.addItems([group.name for group in existing_groups])
@@ -398,231 +489,142 @@ class Budget(QStackedWidget):
             group = next((g for g in existing_groups if g.id == budget_item.budget_group_id), None)
             if group:
                 group_combo.setCurrentText(group.name)
-        group_layout.addWidget(group_combo)
-        
-        # Create new group
+        group_combo.setStyleSheet(input_style)
+        group_combo.setMinimumHeight(input_height)
+        vl.addWidget(group_combo)
+
         new_group_row = QHBoxLayout()
+        new_group_row.setSpacing(8)
         new_group = QLineEdit()
         new_group.setPlaceholderText("Create new group...")
+        new_group.setStyleSheet(input_style)
+        new_group.setMinimumHeight(input_height)
         new_group_row.addWidget(new_group)
-
-        new_group_create = QPushButton("➕ Add Group")
-        new_group_create.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60;
-                color: white;
-                padding: 6px 12px;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #2ecc71;
-            }
-        """)
+        new_group_create = QPushButton("Add Group")
+        new_group_create.setStyleSheet("padding: 10px 16px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px;")
+        new_group_create.setMinimumHeight(input_height)
         new_group_create.clicked.connect(
-            lambda: self.add_budget_group(group_combo, new_group.text())
+            lambda: self.add_budget_group(group_combo, new_group.text(), new_group)
         )
         new_group_row.addWidget(new_group_create)
-        group_layout.addLayout(new_group_row)
-        
-        group_container.setLayout(group_layout)
-        right_column.addWidget(group_container)
+        vl.addLayout(new_group_row)
 
-        # Date Range Section
-        date_container = QWidget()
-        date_container.setStyleSheet("border-radius: 6px; padding: 10px;")
-        date_layout = QVBoxLayout()
-        date_layout.setSpacing(8)
-        
-        date_section_title = QLabel("📅 Active Period")
-        date_section_title_font = QFont()
-        date_section_title_font.setPointSize(14)
-        date_section_title_font.setBold(True)
-        date_section_title.setFont(date_section_title_font)
-        date_layout.addWidget(date_section_title)
-        
-        date_help = QLabel("When should this item be active? For ongoing items, check 'No end date'.")
-        date_help.setStyleSheet("font-size: 10px; font-style: italic;")
-        date_layout.addWidget(date_help)
-        
-        # Start Date
-        start_label = QLabel("Start Date")
-        start_label.setStyleSheet("font-size: 11px; font-weight: bold;")
-        date_layout.addWidget(start_label)
-        
+        vl.addSpacing(20)
+
+        # ── Linked Debt ──
+        existing_debts = self.db.fetch_debts(self.selected_profile.id)
+        vl.addWidget(section_label("Linked Debt (Optional)"))
+        vl.addWidget(help_label("Link to a debt for automatic payment capping based on remaining balance."))
+        vl.addSpacing(4)
+
+        debt_combo = QComboBox()
+        debt_combo.addItem("None", None)
+        for debt in existing_debts:
+            debt_combo.addItem(f"{debt.name} (${float(debt.remaining_amount):,.2f} remaining)", debt.id)
+        if budget_item and budget_item.debt_id:
+            for i in range(debt_combo.count()):
+                if debt_combo.itemData(i) == budget_item.debt_id:
+                    debt_combo.setCurrentIndex(i)
+                    break
+        debt_combo.setStyleSheet(input_style)
+        debt_combo.setMinimumHeight(input_height)
+        vl.addWidget(debt_combo)
+
+        vl.addSpacing(20)
+
+        # ── Active Period ──
+        vl.addWidget(section_label("Active Period"))
+        vl.addWidget(help_label("When should this item be active? For ongoing items, check 'No end date'."))
+        vl.addSpacing(4)
+
+        vl.addWidget(field_label("Start Date"))
         start_date = QDateEdit()
         start_date.setCalendarPopup(True)
+        start_date.setStyleSheet(input_style)
+        start_date.setMinimumHeight(input_height)
         if budget_item:
             start_date.setDate(QDate.fromString(budget_item.start_date.strftime("%Y-%m-%d"), "yyyy-MM-dd"))
         else:
             start_date.setDate(QDate.currentDate())
-        date_layout.addWidget(start_date)
-        
-        # End Date with checkbox
-        end_date_row = QHBoxLayout()
-        end_date_row.setSpacing(10)
-        
-        end_label = QLabel("End Date")
-        end_label.setStyleSheet("color: #333; font-size: 11px; font-weight: bold;")
-        date_layout.addWidget(end_label)
-        
-        # Checkbox for "no end date"
+        vl.addWidget(start_date)
+
+        vl.addSpacing(8)
+
         no_end_date_checkbox = QCheckBox("No end date (ongoing)")
-        no_end_date_checkbox.setStyleSheet("""
-            QCheckBox {
-                font-size: 11px;
-            }
-            QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
-                border-radius: 3px;
-            }
-            QCheckBox::indicator:checked {
-                background-color: #3498db;
-                border-color: #3498db;
-            }
-        """)
-        
-        # Set default: check if editing and has far future date, or if creating new
+        no_end_date_checkbox.setStyleSheet("font-size: 13px;")
         if budget_item:
-            # Check if end date is far in the future (e.g., year > 2100)
             has_end_date = budget_item.end_date.year < 2100
             no_end_date_checkbox.setChecked(not has_end_date)
         else:
-            # Default to no end date for new items
             no_end_date_checkbox.setChecked(True)
-        
+        vl.addWidget(no_end_date_checkbox)
+
+        vl.addWidget(field_label("End Date"))
         end_date = QDateEdit()
         end_date.setCalendarPopup(True)
+        end_date.setStyleSheet(input_style)
+        end_date.setMinimumHeight(input_height)
         if budget_item and budget_item.end_date.year < 2100:
             end_date.setDate(QDate.fromString(budget_item.end_date.strftime("%Y-%m-%d"), "yyyy-MM-dd"))
         else:
-            # Set to one year from now as default
             end_date.setDate(QDate.currentDate().addYears(1))
-        
-        # Connect checkbox to enable/disable end date
+
         def toggle_end_date(checked):
             end_date.setEnabled(not checked)
-        
-        no_end_date_checkbox.toggled.connect(toggle_end_date)
-        # Set initial state
-        end_date.setEnabled(not no_end_date_checkbox.isChecked())
-        
-        date_layout.addWidget(no_end_date_checkbox)
-        date_layout.addWidget(end_date)
-        
-        date_container.setLayout(date_layout)
-        right_column.addWidget(date_container)
-        right_column.addStretch(1)
-        
-        # Add right column to two-column layout
-        two_col_layout.addLayout(right_column)
-        
-        # Add two-column layout to main layout
-        vl.addLayout(two_col_layout)
 
-        # Periods Section (Full Width)
-        period_container = QWidget()
-        period_container.setStyleSheet("border-radius: 6px; padding: 10px;")
-        period_outer_layout = QVBoxLayout()
-        period_outer_layout.setSpacing(8)
+        no_end_date_checkbox.toggled.connect(toggle_end_date)
+        end_date.setEnabled(not no_end_date_checkbox.isChecked())
+        vl.addWidget(end_date)
+
+        vl.addSpacing(20)
+
+        # ── Recurrence Schedule ──
+        vl.addWidget(section_label("Recurrence Schedule"))
+        vl.addWidget(help_label(
+            "Define when this item occurs. Examples:\n"
+            "  Monthly on the 1st — Rent or mortgage\n"
+            "  Biweekly on Friday — Paycheck\n"
+            "  Weekly on Monday — Grocery shopping"
+        ))
         
-        period_section_title = QLabel("🔁 Recurrence Schedule")
-        period_section_title_font = QFont()
-        period_section_title_font.setPointSize(14)
-        period_section_title_font.setBold(True)
-        period_section_title.setFont(period_section_title_font)
-        period_outer_layout.addWidget(period_section_title)
-        
-        period_help = QLabel("💡 Define when this item occurs. Examples:\n" +
-                            "• Monthly on the 1st: Your rent or mortgage\n" +
-                            "• Biweekly on Friday: Paycheck\n" +
-                            "• Weekly on Monday: Grocery shopping\n" +
-                            "You can add multiple periods for complex schedules.")
-        period_help.setStyleSheet("font-size: 10px; padding: 8px; border-radius: 4px;")
-        period_help.setWordWrap(True)
-        period_outer_layout.addWidget(period_help)
-        
+        vl.addSpacing(4)
+
         period_layout = QVBoxLayout()
         period_layout.setSpacing(10)
 
-        # Add existing periods if editing
         if budget_item and budget_item.periods:
             for period in budget_item.periods:
                 self.add_budget_period(period_layout, True, period)
         else:
             self.add_budget_period(period_layout)
-        
-        period_outer_layout.addLayout(period_layout)
-        
-        add_period_button = QPushButton("➕ Add Another Period")
-        add_period_button.setStyleSheet("""
-            QPushButton {
-                background-color: #27ae60;
-                color: white;
-                padding: 8px 16px;
-                border: none;
-                border-radius: 4px;
-                font-size: 11px;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #2ecc71;
-            }
-        """)
+
+        vl.addLayout(period_layout)
+
+        add_period_button = QPushButton("Add Another Period")
+        add_period_button.setStyleSheet("padding: 10px 16px; border: 1px solid #546e7a; border-radius: 5px; font-size: 13px;")
+        add_period_button.setMinimumHeight(40)
         add_period_button.clicked.connect(
             lambda: self.add_budget_period(period_layout, True)
         )
-        period_outer_layout.addWidget(add_period_button)
-        
-        period_container.setLayout(period_outer_layout)
-        vl.addWidget(period_container)
+        vl.addWidget(add_period_button)
+
+        vl.addSpacing(24)
 
         # Action buttons
         button_hl = QHBoxLayout()
-        button_hl.setSpacing(10)
-        button_hl.addStretch(1)
-        
-        cancel_button = QPushButton("❌ Cancel")
-        cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #7f8c8d;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #95a5a6;
-            }
-        """)
-        button_hl.addWidget(cancel_button)
-        
-        save_button = QPushButton(f"✅ {'Update' if budget_item else 'Create'} Budget Item")
-        save_button.setStyleSheet("""
-            QPushButton {
-                background-color: #3498db;
-                color: white;
-                padding: 10px 24px;
-                border: none;
-                border-radius: 4px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #5dade2;
-            }
-            QPushButton:pressed {
-                background-color: #2980b9;
-            }
-        """)
-        button_hl.addWidget(save_button)
-        button_hl.addStretch(1)
+        button_hl.setSpacing(12)
 
+        cancel_button = QPushButton("Cancel")
+        cancel_button.setStyleSheet("padding: 12px 24px; border: 1px solid #546e7a; border-radius: 6px; font-size: 14px; font-weight: bold;")
+        cancel_button.setMinimumHeight(44)
+        button_hl.addWidget(cancel_button)
+
+        save_button = QPushButton(f"{'Update' if budget_item else 'Create'} Budget Item")
+        save_button.setStyleSheet("padding: 12px 24px; border: 1px solid #546e7a; border-radius: 6px; font-size: 14px; font-weight: bold;")
+        save_button.setMinimumHeight(44)
+        button_hl.addWidget(save_button)
+
+        button_hl.addStretch(1)
         vl.addLayout(button_hl)
 
         cancel_button.clicked.connect(lambda: self.cancel_edit())
@@ -636,6 +638,7 @@ class Budget(QStackedWidget):
                 # Use far future date if "no end date" is checked
                 "2999-12-31" if no_end_date_checkbox.isChecked() else end_date.date().toString("yyyy-MM-dd"),
                 self.periods_from_layout(period_layout),
+                debt_combo.currentData(),
             )
         )
 
@@ -643,9 +646,19 @@ class Budget(QStackedWidget):
         scroll.setWidget(content_widget)
         self.addWidget(scroll)
 
-    def add_budget_group(self, combobox, name):
-        self.db.create_budget_group(self.selected_profile.id, name)
-        combobox.addItem(name)
+    def add_budget_group(self, combobox, name, input_widget=None):
+        if not name.strip():
+            QMessageBox.warning(self, "Invalid Input", "Please enter a group name.")
+            return
+        try:
+            self.db.create_budget_group(self.selected_profile.id, name)
+            combobox.addItem(name)
+            combobox.setCurrentText(name)
+            if input_widget:
+                input_widget.clear()
+            QMessageBox.information(self, "Success", f"Budget group '{name}' created.")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to create group: {str(e)}")
 
     def cancel_edit(self):
         """Cancel editing and return to list."""
@@ -663,13 +676,18 @@ class Budget(QStackedWidget):
         )
         
         if reply == QMessageBox.StandardButton.Yes:
-            self.db.delete_budget_item(budget_item.id)
-            QMessageBox.information(
-                self,
-                "Success",
-                f"Budget item '{budget_item.name}' has been deleted."
-            )
-            self.render_budget()
+            try:
+                self.db.delete_budget_item(budget_item.id)
+                QMessageBox.information(
+                    self,
+                    "Success",
+                    f"Budget item '{budget_item.name}' has been deleted."
+                )
+                self.refresh()
+            except Exception as e:
+                QMessageBox.critical(
+                    self, "Error", f"Failed to delete budget item: {str(e)}"
+                )
 
     def add_budget_period(self, layout, removable=False, period: BudgetItemPeriod = None):
         hl = QHBoxLayout()
@@ -728,6 +746,12 @@ class Budget(QStackedWidget):
         return periods
 
     def remove_budget_period(self, layout, parent):
+        # Remove all child widgets from the layout
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
         parent.removeItem(layout)
 
     def update_budget_value(self, combobox, value):
@@ -791,32 +815,45 @@ class Budget(QStackedWidget):
             combobox.setEnabled(False)
 
     def save_budget_item(
-        self, name, type, amount, group, start_date, end_date, periods
+        self, name, type, amount, group, start_date, end_date, periods, debt_id=None
     ):
         """Save budget item (create or update)."""
-        if self.editing_budget_item:
-            # Update existing item
-            self.db.update_budget_item(
-                self.editing_budget_item.id,
-                name,
-                type,
-                amount,
-                group,
-                start_date,
-                end_date,
-                periods,
+        try:
+            if self.editing_budget_item:
+                # Update existing item
+                self.db.update_budget_item(
+                    self.editing_budget_item.id,
+                    name,
+                    type,
+                    amount,
+                    group,
+                    start_date,
+                    end_date,
+                    periods,
+                    debt_id=debt_id,
+                )
+                self.editing_budget_item = None
+                QMessageBox.information(
+                    self, "Success", f"Budget item '{name}' updated successfully!"
+                )
+            else:
+                # Create new item
+                self.db.create_budget_item(
+                    self.selected_profile.id,
+                    name,
+                    type,
+                    amount,
+                    group,
+                    start_date,
+                    end_date,
+                    periods,
+                    debt_id=debt_id,
+                )
+                QMessageBox.information(
+                    self, "Success", f"Budget item '{name}' created successfully!"
+                )
+            self.refresh()
+        except Exception as e:
+            QMessageBox.critical(
+                self, "Error", f"Failed to save budget item: {str(e)}"
             )
-            self.editing_budget_item = None
-        else:
-            # Create new item
-            self.db.create_budget_item(
-                self.selected_profile.id,
-                name,
-                type,
-                amount,
-                group,
-                start_date,
-                end_date,
-                periods,
-            )
-        self.render_budget()
